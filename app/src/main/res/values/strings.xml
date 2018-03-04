@@ -27,4 +27,6 @@
     </string>
     <string name="nav_logout">Logout</string>
     <string name="title_activity_login2">Sign in</string>
+    <string name="cal_action_month">Month View</string>
+    <string name="cal_action_week">Week View</string>
 </resources>
