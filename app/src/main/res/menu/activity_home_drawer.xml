@@ -3,11 +3,13 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:showIn="navigation_view">
 
-    <group android:checkableBehavior="single">
+    <group
+        android:id="@+id/nav_menu"
+        android:checkableBehavior="single">
         <item
             android:id="@+id/nav_db"
-            android:icon="@drawable/ic_menu_db"
             android:checked="true"
+            android:icon="@drawable/ic_menu_db"
             android:title="@string/nav_dashboard" />
         <item
             android:id="@+id/nav_cal"
@@ -29,5 +31,11 @@
             android:id="@+id/nav_settings"
             android:icon="@drawable/ic_menu_settings"
             android:title="@string/nav_settings" />
+    </group>
+    <group
+        android:id="@+id/nav_footer">
+        <item
+            android:id="@+id/nav_logout"
+            android:title="@string/nav_logout"/>
     </group>
 </menu>

@@ -1,5 +1,6 @@
 package com.example.abhinav.smartplanner;
 
+import android.content.Intent;
 import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Bundle;
@@ -56,6 +57,12 @@ public class HomeActivity extends AppCompatActivity
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        login();
+    }
+
+    @Override
     public void onBackPressed() {
         if (mDrawer.isDrawerOpen(GravityCompat.START)) {
             mDrawer.closeDrawer(GravityCompat.START);
@@ -64,11 +71,24 @@ public class HomeActivity extends AppCompatActivity
         }
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == AccountManager.LOGIN_REQUEST) {
+            if (resultCode == RESULT_OK) {
+                Toast.makeText(this, "Logged in!", Toast.LENGTH_SHORT).show();
+            } else if (resultCode == RESULT_CANCELED) {
+                finish();
+            }
+        }
+    }
+
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
+        mDrawer.closeDrawer(GravityCompat.START);
 
         Fragment fragment = null;
         Class fragmentClass = null;
@@ -98,6 +118,11 @@ public class HomeActivity extends AppCompatActivity
             case R.id.nav_db:
                 fragmentClass = DashboardFragment.class;
                 fragmentName = mRes.getString(R.string.nav_dashboard);
+                break;
+            case R.id.nav_logout:
+                AccountManager.logout();
+                login();
+                return true;
         }
 
         try {
@@ -110,12 +135,18 @@ public class HomeActivity extends AppCompatActivity
         mToolbar.setTitle(fragmentName);
         item.setChecked(true);
 
-        mDrawer.closeDrawer(GravityCompat.START);
         return true;
     }
 
     @Override
     public void onFragmentInteraction(Uri uri) {
 
+    }
+
+    private void login() {
+        if (!AccountManager.isLoggedIn()) {
+            Intent i = new Intent(this, LoginActivity.class);
+            startActivityForResult(i, AccountManager.LOGIN_REQUEST);
+        }
     }
 }
