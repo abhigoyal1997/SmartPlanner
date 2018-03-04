@@ -15,7 +15,12 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
+
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 
 public class HomeActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
@@ -25,6 +30,8 @@ public class HomeActivity extends AppCompatActivity
     private Toolbar mToolbar = null;
     private FragmentManager mFManager = null;
     private Resources mRes = null;
+    private AccountManager accountManager = null;
+    private NavigationView mNavigationView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,8 +59,10 @@ public class HomeActivity extends AppCompatActivity
         mDrawer.addDrawerListener(toggle);
         toggle.syncState();
 
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
+        mNavigationView = (NavigationView) findViewById(R.id.nav_view);
+        mNavigationView.setNavigationItemSelectedListener(this);
+
+        accountManager = AccountManager.getInstance();
     }
 
     @Override
@@ -76,7 +85,7 @@ public class HomeActivity extends AppCompatActivity
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == AccountManager.LOGIN_REQUEST) {
             if (resultCode == RESULT_OK) {
-                Toast.makeText(this, "Logged in!", Toast.LENGTH_SHORT).show();
+                initializeNavBar();
             } else if (resultCode == RESULT_CANCELED) {
                 finish();
             }
@@ -120,7 +129,7 @@ public class HomeActivity extends AppCompatActivity
                 fragmentName = mRes.getString(R.string.nav_dashboard);
                 break;
             case R.id.nav_logout:
-                AccountManager.logout();
+                accountManager.logout();
                 login();
                 return true;
         }
@@ -144,9 +153,27 @@ public class HomeActivity extends AppCompatActivity
     }
 
     private void login() {
-        if (!AccountManager.isLoggedIn()) {
+        if (!accountManager.isLoggedIn()) {
             Intent i = new Intent(this, LoginActivity.class);
             startActivityForResult(i, AccountManager.LOGIN_REQUEST);
+        } else {
+            initializeNavBar();
+        }
+    }
+
+    private void initializeNavBar() {
+        View navHeaderView = mNavigationView.getHeaderView(0);
+        ImageView navImageView = navHeaderView.findViewById(R.id.nav_header_image);
+        TextView navNameView = navHeaderView.findViewById(R.id.nav_header_name);
+        TextView navEmailView = navHeaderView.findViewById(R.id.nav_header_email);
+
+        navNameView.setText(accountManager.getName());
+        navEmailView.setText(accountManager.getEmail());
+
+        if (accountManager.getImageUrl() != null) {
+            Glide.with(getApplicationContext()).load(accountManager.getImageUrl())
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .into(navImageView);
         }
     }
 }
