@@ -20,6 +20,6 @@ public class AccountManager {
     }
 
     public static boolean isLoggedIn() {
-        return true;
+        return !(mEmail == null);
     }
 }
