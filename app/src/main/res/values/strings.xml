@@ -5,7 +5,7 @@
     <string name="navigation_drawer_close">Close navigation drawer</string>
 
     <string name="action_settings">Settings</string>
-    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_va">Assistant</string>
     <string name="nav_cal">Calendar</string>
     <string name="nav_tasks">Tasks</string>
     <string name="nav_eval">Evaluations</string>

@@ -1,14 +1,10 @@
 package com.example.abhinav.smartplanner;
 
-import android.Manifest;
-import android.app.Activity;
-import android.content.pm.PackageManager;
 import android.os.AsyncTask;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
 import com.google.gson.JsonElement;
+import android.support.v4.app.Fragment;
 
 import java.lang.ref.WeakReference;
 import java.util.Map;
@@ -32,8 +28,10 @@ public class VirtualAssistant implements AIListener {
 
     private AIService aiService;
     private AIDataService aiDataService;
+    private Fragment fragment;
 
-    public VirtualAssistant() {
+    public VirtualAssistant(Fragment fragment) {
+        this.fragment = fragment;
         String AI_ACCESS_TOKEN = "cc87191fa725498285c56d55fa0f3b2f";
         final AIConfiguration config = new AIConfiguration(AI_ACCESS_TOKEN,
                 AIConfiguration.SupportedLanguages.English,
@@ -123,7 +121,8 @@ public class VirtualAssistant implements AIListener {
             VirtualAssistant assistant = assistantWeakReference.get();
             if (response != null) {
                 Result result = response.getResult();
-                Log.d(assistant.API_TAG, result.getFulfillment().getSpeech());
+                VAFragment fragment = (VAFragment) assistant.fragment;
+                fragment.onAIQueryResult(result.getFulfillment().getSpeech());
             }
         }
     }
