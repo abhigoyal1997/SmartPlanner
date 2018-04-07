@@ -1,7 +1,10 @@
 package com.example.abhinav.smartplanner;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.NavigationView;
@@ -144,6 +147,15 @@ public class HomeActivity extends AppCompatActivity
     }
 
     private void logout() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = null;
+        if (connectivityManager != null) {
+            networkInfo = connectivityManager.getActiveNetworkInfo();
+        }
+        if (networkInfo == null || !networkInfo.isConnected()) {
+            Toast.makeText(this, "Not connected to internet!", Toast.LENGTH_SHORT).show();
+            return;
+        }
         Intent i = new Intent(this, LoginActivity.class);
         i.setAction(LoginActivity.ACTION_LOGOUT);
         startActivityForResult(i, LOGOUT_REQUEST);
