@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
@@ -24,11 +25,16 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthCredential;
 import com.google.firebase.auth.GoogleAuthProvider;
 
+import java.util.Objects;
+
 public class LoginActivity extends AppCompatActivity {
 
     private static final int RC_SIGN_IN = 1;
+    public static final String ACTION_LOGOUT = "logout";
+
     private GoogleSignInClient mGoogleSignInClient;
     private FirebaseAuth firebaseAuth;
+    private ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,13 +45,26 @@ public class LoginActivity extends AppCompatActivity {
                 .requestIdToken(getString(R.string.default_web_client_id))
                 .requestEmail()
                 .build();
-
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
         firebaseAuth = FirebaseAuth.getInstance();
+
+        if (Objects.equals(getIntent().getAction(), ACTION_LOGOUT)) {
+            mGoogleSignInClient.signOut();
+            if (GoogleSignIn.getLastSignedInAccount(this) == null) {
+                firebaseAuth.signOut();
+            } else {
+                setResult(RESULT_OK);
+                finish();
+            }
+        }
+
+        progressBar = findViewById(R.id.login_progress);
         SignInButton mSignInButton = findViewById(R.id.login_button);
+
         mSignInButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
+                progressBar.setVisibility(View.VISIBLE);
                 googleSignIn();
             }
         });
@@ -54,15 +73,6 @@ public class LoginActivity extends AppCompatActivity {
     private void googleSignIn() {
         Intent intent = mGoogleSignInClient.getSignInIntent();
         startActivityForResult(intent, RC_SIGN_IN);
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        FirebaseUser currentUser = firebaseAuth.getCurrentUser();
-        if (currentUser != null) {
-            loggedIn(currentUser);
-        }
     }
 
     @Override
@@ -77,16 +87,12 @@ public class LoginActivity extends AppCompatActivity {
 
         if (requestCode == RC_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
-            handleSignInResult(task);
-        }
-    }
-
-    private void handleSignInResult(Task<GoogleSignInAccount> task) {
-        try {
-            GoogleSignInAccount account = task.getResult(ApiException.class);
-            firebaseAuthWithGoogle(account);
-        } catch (ApiException e) {
-            Log.w("Google Sign In", "signInResult:failed code=" + e.getStatusCode());
+            try {
+                GoogleSignInAccount account = task.getResult(ApiException.class);
+                firebaseAuthWithGoogle(account);
+            } catch (ApiException e) {
+                Log.w("Google Sign In", "signInResult:failed code=" + e.getStatusCode());
+            }
         }
     }
 
@@ -96,19 +102,14 @@ public class LoginActivity extends AppCompatActivity {
                 .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
                     @Override
                     public void onComplete(@NonNull Task<AuthResult> task) {
+                        progressBar.setVisibility(View.INVISIBLE);
                         if (task.isSuccessful()) {
-                            FirebaseUser user = firebaseAuth.getCurrentUser();
-                            loggedIn(user);
+                            setResult(RESULT_OK);
+                            finish();
                         } else {
                             Toast.makeText(getApplicationContext(), "Authentication Failed", Toast.LENGTH_SHORT).show();
                         }
                     }
                 });
-    }
-
-    private void loggedIn(FirebaseUser account) {
-        AccountManager.getInstance().login(account.getEmail(), account.getDisplayName(), account.getPhotoUrl());
-        setResult(RESULT_OK);
-        finish();
     }
 }

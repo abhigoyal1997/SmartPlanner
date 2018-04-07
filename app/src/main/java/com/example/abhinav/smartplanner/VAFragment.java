@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -13,7 +15,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -25,6 +26,8 @@ import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.firebase.ui.database.FirebaseRecyclerAdapter;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -34,15 +37,15 @@ import com.google.firebase.database.FirebaseDatabase;
  */
 public class VAFragment extends Fragment {
 
-    private VirtualAssistant assistant;
     private final int RECORD_PERMISSION_REQUEST = 99;
+    private final String DB_KEY_CHAT = "messages";
 
     private OnFragmentInteractionListener mListener;
+    private VirtualAssistant assistant;
 
     private RecyclerView chatView;
     private EditText newChatMsg;
-    private RelativeLayout chatSendView;
-    private DatabaseReference dbRef;
+    private DatabaseReference dbChat;
     private FirebaseRecyclerAdapter<ChatMessage, ChatViewHolder> chatAdapter;
 
     private boolean flagFab = true;
@@ -69,14 +72,17 @@ public class VAFragment extends Fragment {
 
         chatView = r.findViewById(R.id.chat_recycler_view);
         newChatMsg = r.findViewById(R.id.chat_msg);
-        chatSendView = r.findViewById(R.id.chat_send);
+        RelativeLayout chatSendView = r.findViewById(R.id.chat_send);
 
         final LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
         linearLayoutManager.setStackFromEnd(true);
         chatView.setLayoutManager(linearLayoutManager);
 
-        dbRef = FirebaseDatabase.getInstance().getReference();
-        dbRef.keepSynced(true);
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        String uid = user != null ? user.getUid() : "";
+
+        dbChat = FirebaseDatabase.getInstance().getReference().getRoot().child("users").child(uid);
+        dbChat.keepSynced(true);
 
         chatSendView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -84,7 +90,16 @@ public class VAFragment extends Fragment {
                 String message = newChatMsg.getText().toString().trim();
                 if (!message.equals("")) {
                     ChatMessage chatMessage = new ChatMessage(message, "user");
-                    dbRef.child("chat").push().setValue(chatMessage);
+                    ConnectivityManager connectivityManager = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
+                    NetworkInfo networkInfo = null;
+                    if (connectivityManager != null) {
+                        networkInfo = connectivityManager.getActiveNetworkInfo();
+                    }
+                    if (networkInfo == null || !networkInfo.isConnected()) {
+                        Toast.makeText(getContext(), "Not connected to internet!", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    dbChat.push().setValue(chatMessage);
                     assistant.handleQuery(message);
                     newChatMsg.setText("");
                 } else {
@@ -125,7 +140,7 @@ public class VAFragment extends Fragment {
             }
         });
 
-        chatAdapter = new FirebaseRecyclerAdapter<ChatMessage, ChatViewHolder>(ChatMessage.class, R.layout.chat_list, ChatViewHolder.class, dbRef.child("chat")) {
+        chatAdapter = new FirebaseRecyclerAdapter<ChatMessage, ChatViewHolder>(ChatMessage.class, R.layout.chat_list, ChatViewHolder.class, dbChat) {
             @Override
             protected void populateViewHolder(ChatViewHolder viewHolder, ChatMessage model, int position) {
                 if (model.getMsgUser().equals("user")) {
@@ -197,10 +212,9 @@ public class VAFragment extends Fragment {
 
 
     public void onAIQueryResult(String reply) {
-        Log.d("result", reply);
         if (!reply.equals("")) {
             ChatMessage chatMessage = new ChatMessage(reply, "bot");
-            dbRef.child("chat").push().setValue(chatMessage);
+            dbChat.push().setValue(chatMessage);
         }
     }
 

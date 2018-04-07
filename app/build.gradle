@@ -35,6 +35,7 @@ dependencies {
     compile 'com.google.firebase:firebase-core:12.0.1'
     compile 'com.google.firebase:firebase-database:12.0.1'
     compile 'com.google.firebase:firebase-auth:12.0.1'
+    compile 'com.google.firebase:firebase-storage:12.0.1'
     compile 'com.firebaseui:firebase-ui-database:0.4.1'
     compile 'ai.api:sdk:2.0.7@aar'
     compile('ai.api:libai:1.4.8') {

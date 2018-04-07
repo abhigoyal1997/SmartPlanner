@@ -6,6 +6,9 @@ import android.util.Log;
 import com.google.gson.JsonElement;
 import android.support.v4.app.Fragment;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.lang.ref.WeakReference;
 import java.util.Map;
 
@@ -123,6 +126,15 @@ public class VirtualAssistant implements AIListener {
                 Result result = response.getResult();
                 VAFragment fragment = (VAFragment) assistant.fragment;
                 fragment.onAIQueryResult(result.getFulfillment().getSpeech());
+                Log.d(assistant.API_TAG, result.getParameters().toString());
+                HomeActivity activity = (HomeActivity) assistant.fragment.getActivity();
+                JSONObject task = new JSONObject();
+                try {
+                    task.put("task", result.getAction());
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                activity.handleTask(task);
             }
         }
     }
