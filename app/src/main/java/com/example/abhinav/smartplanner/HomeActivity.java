@@ -45,14 +45,6 @@ public class HomeActivity extends AppCompatActivity
         mFManager = getSupportFragmentManager();
         mFManager.beginTransaction().replace(R.id.flContent, DashboardFragment.newInstance()).commit();
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Toast.makeText(getApplicationContext(), "Assistant to be implemented", Toast.LENGTH_SHORT).show();
-            }
-        });
-
         mDrawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, mDrawer, mToolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
