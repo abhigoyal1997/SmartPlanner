@@ -5,11 +5,26 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context="com.example.abhinav.smartplanner.DashboardFragment">
 
-    <TextView
+    <LinearLayout
+        android:layout_gravity="center"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="Dashboard" />
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
 
+    <EditText
+        android:id="@+id/query"
+        android:hint="Type your query here"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:text="ok"
+        android:id="@+id/query_button"
+        android:layout_gravity="center"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    </LinearLayout>
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/fab"
         android:layout_width="wrap_content"
