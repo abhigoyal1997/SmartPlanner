@@ -43,6 +43,7 @@ import java.lang.*;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Random;
 
@@ -347,6 +348,33 @@ public class VAFragment extends Fragment {
                             }
                         }
                     });
+                }else if (query.getString(NAME).equals("event")) {
+                    JSONObject params = request.getJSONObject(PARAMS);
+                    dbHandler.getEvents(params.getLong("from"), params.getLong("to"), new OnResponseListener() {
+                        @Override
+                        public void onResponse(JSONObject response) throws JSONException {
+                            if (response.getInt(STATUS) == STATUS_OK) {
+                                @SuppressWarnings("unchecked")
+                                List<CalEvent> events = (List<CalEvent>) response.get(DATA);
+                                if (events.isEmpty()) {
+                                    JSONArray res = speech.getJSONArray(SPEECH_EMP);
+                                    updateChat(res.getString(r.nextInt(res.length())), "bot");
+                                } else {
+                                    JSONArray res = speech.getJSONArray(SPEECH_POS);
+                                    StringBuilder builder = new StringBuilder();
+                                    for (CalEvent event : events) {
+                                        builder.append(event.name);
+                                        builder.append('\n');
+                                    }
+                                    builder.deleteCharAt(builder.lastIndexOf("\n"));
+                                    updateChat(res.getString(r.nextInt(res.length())) + '\n' + builder.toString(), "bot");
+                                }
+                            } else {
+                                JSONArray res = speech.getJSONArray(SPEECH_NEG);
+                                updateChat(res.getString(r.nextInt(res.length())), "bot");
+                            }
+                        }
+                    });
                 }
             } else if (query.getString(TYPE).equals(QUERY_ADD)) {
                 if (query.getString(NAME).equals("course")) {
@@ -385,6 +413,24 @@ public class VAFragment extends Fragment {
                             updateChat(res.getString(r.nextInt(res.length())), "bot");
                         }
                     });
+                } else if (query.getString(NAME).equals("task")) {
+                    JSONObject params = request.getJSONObject(PARAMS);
+                    dbHandler.addToDoTask(new ToDoTask(params), new OnResponseListener() {
+                        @Override
+                        public void onResponse(JSONObject response) throws JSONException {
+                            JSONArray res;
+                            if (response.getInt(STATUS) == STATUS_OK) {
+                                if (response.getBoolean(DATA)) {
+                                    res = speech.getJSONArray(SPEECH_POS);
+                                } else {
+                                    res = speech.getJSONArray(SPEECH_DUP);
+                                }
+                            } else {
+                                res = speech.getJSONArray(SPEECH_NEG);
+                            }
+                            updateChat(res.getString(r.nextInt(res.length())), "bot");
+                        }
+                    });
                 }
             }
         } catch (JSONException e) {
@@ -394,7 +440,7 @@ public class VAFragment extends Fragment {
 
     private String getTimeStr(long time) {
         Log.d("time", String.valueOf(time));
-        return String.valueOf((time / 60000) / 60) + ":" + String.valueOf((time / 60000) % 60);
+        return String.format(Locale.US, "%02d:%02d", time/60000 /60, time/60000 %60);
     }
 
     private String getSchedule(CalEvent event) {
@@ -404,7 +450,7 @@ public class VAFragment extends Fragment {
             days.append(" ");
         }
 
-        return getTimeStr(event.from) + " - " + getTimeStr(event.to) + " => " + days.toString();
+        return days.toString() + " => " + getTimeStr(event.from) + " - " + getTimeStr(event.to);
     }
 
     private void updateChat(String message, String sender) {

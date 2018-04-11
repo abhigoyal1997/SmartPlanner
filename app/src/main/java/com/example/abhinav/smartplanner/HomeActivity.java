@@ -29,7 +29,6 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.FirebaseDatabase;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -47,9 +46,6 @@ public class HomeActivity extends AppCompatActivity
     private Toolbar mToolbar = null;
     private FragmentManager mFManager = null;
     private Resources mRes = null;
-    private NavigationView mNavigationView;
-
-    private boolean persistence = false;
 
     List<AuthUI.IdpConfig> providers = Collections.singletonList(
             new AuthUI.IdpConfig.GoogleBuilder().build()
@@ -83,10 +79,6 @@ public class HomeActivity extends AppCompatActivity
         if (requestCode == RC_SIGN_IN) {
             if (resultCode == RESULT_OK) {
                 initializeUI();
-                if (!persistence) {
-                    FirebaseDatabase.getInstance().setPersistenceEnabled(true);
-                    persistence = true;
-                }
             } else {
                 Toast.makeText(this, "Sign in failed!", Toast.LENGTH_SHORT).show();
             }
@@ -195,7 +187,7 @@ public class HomeActivity extends AppCompatActivity
         mDrawer.addDrawerListener(toggle);
         toggle.syncState();
 
-        mNavigationView = findViewById(R.id.nav_view);
+        NavigationView mNavigationView = findViewById(R.id.nav_view);
         mNavigationView.setNavigationItemSelectedListener(this);
 
         View navHeaderView = mNavigationView.getHeaderView(0);
@@ -218,13 +210,5 @@ public class HomeActivity extends AppCompatActivity
 
         mFManager = getSupportFragmentManager();
         mFManager.beginTransaction().replace(R.id.flContent, VAFragment.newInstance()).commit();
-    }
-
-    public void handleTask(JSONObject task) {
-        try {
-            Toast.makeText(this, task.getString("task"), Toast.LENGTH_SHORT).show();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
     }
 }

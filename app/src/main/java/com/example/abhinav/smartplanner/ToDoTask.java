@@ -1,5 +1,8 @@
 package com.example.abhinav.smartplanner;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 /**
  * Created by shraddheya on 11/4/18.
  */
@@ -17,6 +20,16 @@ class ToDoTask {
 
     public ToDoTask() {
 
+    }
+
+    public ToDoTask(JSONObject params) {
+        try {
+            this.date = params.getLong("date");
+            this.time = params.getLong("time");
+            this.title = params.getString("name");
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
     public long getDate() {

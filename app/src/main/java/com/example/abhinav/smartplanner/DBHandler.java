@@ -218,7 +218,6 @@ public class DBHandler {
 
     public void getEvents(long from, long to, final OnResponseListener responseListener) {
         Query query = dbEvents.whereEqualTo("recur", false);
-        ;
         if (to > from) {
             query = dbEvents.whereEqualTo("recur", false)
                     .whereGreaterThan("date", from)
