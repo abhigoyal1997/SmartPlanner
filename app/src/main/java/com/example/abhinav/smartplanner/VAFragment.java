@@ -38,10 +38,9 @@ import com.google.firebase.firestore.Query;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.xml.sax.helpers.LocatorImpl;
 
 import java.lang.*;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -60,6 +59,7 @@ import static com.example.abhinav.smartplanner.Constants.SPEECH_NEG;
 import static com.example.abhinav.smartplanner.Constants.SPEECH_POS;
 import static com.example.abhinav.smartplanner.Constants.SPEECH_WAIT;
 import static com.example.abhinav.smartplanner.Constants.STATUS;
+import static com.example.abhinav.smartplanner.Constants.STATUS_ERROR;
 import static com.example.abhinav.smartplanner.Constants.STATUS_OK;
 import static com.example.abhinav.smartplanner.Constants.TYPE;
 import static com.example.abhinav.smartplanner.Constants.TYPE_JSON;
@@ -293,6 +293,60 @@ public class VAFragment extends Fragment {
                             }
                         }
                     });
+                } else if (query.getString(NAME).equals("event")) {
+                    JSONObject params = request.getJSONObject(PARAMS);
+                    dbHandler.getEvents(params.getLong("from"), params.getLong("to"), new OnResponseListener() {
+                        @Override
+                        public void onResponse(JSONObject response) throws JSONException {
+                            if (response.getInt(STATUS) == STATUS_OK) {
+                                @SuppressWarnings("unchecked")
+                                List<CalEvent> events = (List<CalEvent>) response.get(DATA);
+                                if (events.isEmpty()) {
+                                    JSONArray res = speech.getJSONArray(SPEECH_EMP);
+                                    updateChat(res.getString(r.nextInt(res.length())), "bot");
+                                } else {
+                                    JSONArray res = speech.getJSONArray(SPEECH_POS);
+                                    StringBuilder builder = new StringBuilder();
+                                    for (CalEvent event : events) {
+                                        builder.append(event.name);
+                                        builder.append('\n');
+                                    }
+                                    builder.deleteCharAt(builder.lastIndexOf("\n"));
+                                    updateChat(res.getString(r.nextInt(res.length())) + '\n' + builder.toString(), "bot");
+                                }
+                            } else {
+                                JSONArray res = speech.getJSONArray(SPEECH_NEG);
+                                updateChat(res.getString(r.nextInt(res.length())), "bot");
+                            }
+                        }
+                    });
+                } else if (query.getString(NAME).equals("class")) {
+                    JSONObject params = request.getJSONObject(PARAMS);
+                    dbHandler.getSchedule(params.getString("courseCode"), new OnResponseListener() {
+                        @Override
+                        public void onResponse(JSONObject response) throws JSONException {
+                            if (response.getInt(STATUS) == STATUS_OK) {
+                                @SuppressWarnings("unchecked")
+                                List<CalEvent> events = (List<CalEvent>) response.get(DATA);
+                                if (events.isEmpty()) {
+                                    JSONArray res = speech.getJSONArray(SPEECH_EMP);
+                                    updateChat(res.getString(r.nextInt(res.length())), "bot");
+                                } else {
+                                    JSONArray res = speech.getJSONArray(SPEECH_POS);
+                                    StringBuilder builder = new StringBuilder();
+                                    for (CalEvent event : events) {
+                                        builder.append(getSchedule(event));
+                                        builder.append('\n');
+                                    }
+                                    builder.deleteCharAt(builder.lastIndexOf("\n"));
+                                    updateChat(res.getString(r.nextInt(res.length())) + '\n' + builder.toString(), "bot");
+                                }
+                            } else {
+                                JSONArray res = speech.getJSONArray(SPEECH_NEG);
+                                updateChat(res.getString(r.nextInt(res.length())), "bot");
+                            }
+                        }
+                    });
                 }
             } else if (query.getString(TYPE).equals(QUERY_ADD)) {
                 if (query.getString(NAME).equals("course")) {
@@ -313,27 +367,9 @@ public class VAFragment extends Fragment {
                             updateChat(res.getString(r.nextInt(res.length())), "bot");
                         }
                     });
-                } else if (query.getString(NAME).equals("class")) {
+                } else if (query.getString(NAME).equals("class") || query.getString(NAME).equals("event")) {
                     JSONObject params = request.getJSONObject(PARAMS);
-                    dbHandler.addEvent(new Event(params, Event.EVENT_CLASS), new OnResponseListener() {
-                        @Override
-                        public void onResponse(JSONObject response) throws JSONException {
-                            JSONArray res;
-                            if (response.getInt(STATUS) == STATUS_OK) {
-                                if (response.getBoolean(DATA)) {
-                                    res = speech.getJSONArray(SPEECH_POS);
-                                } else {
-                                    res = speech.getJSONArray(SPEECH_DUP);
-                                }
-                            } else {
-                                res = speech.getJSONArray(SPEECH_NEG);
-                            }
-                            updateChat(res.getString(r.nextInt(res.length())), "bot");
-                        }
-                    });
-                } else if (query.getString(NAME).equals("event")) {
-                    JSONObject params = request.getJSONObject(PARAMS);
-                    dbHandler.addEvent(new Event(params, Event.EVENT_CLASS), new OnResponseListener() {
+                    dbHandler.addEvent(new CalEvent(params), new OnResponseListener() {
                         @Override
                         public void onResponse(JSONObject response) throws JSONException {
                             JSONArray res;
@@ -354,6 +390,21 @@ public class VAFragment extends Fragment {
         } catch (JSONException e) {
             e.printStackTrace();
         }
+    }
+
+    private String getTimeStr(long time) {
+        Log.d("time", String.valueOf(time));
+        return String.valueOf((time / 60000) / 60) + ":" + String.valueOf((time / 60000) % 60);
+    }
+
+    private String getSchedule(CalEvent event) {
+        StringBuilder days = new StringBuilder();
+        for (int day : event.days) {
+            days.append(CalEvent.DAY[day]);
+            days.append(" ");
+        }
+
+        return getTimeStr(event.from) + " - " + getTimeStr(event.to) + " => " + days.toString();
     }
 
     private void updateChat(String message, String sender) {
