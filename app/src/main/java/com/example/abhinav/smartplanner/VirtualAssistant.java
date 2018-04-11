@@ -8,8 +8,10 @@ import com.google.gson.JsonElement;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.xml.sax.helpers.LocatorImpl;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Map;
 
 import ai.api.AIDataService;
@@ -17,6 +19,8 @@ import ai.api.AIListener;
 import ai.api.AIServiceException;
 import ai.api.android.AIConfiguration;
 import ai.api.android.AIService;
+import ai.api.model.AIContext;
+import ai.api.model.AIEvent;
 import ai.api.model.AIRequest;
 import ai.api.model.AIResponse;
 import ai.api.model.ResponseMessage;
@@ -99,6 +103,14 @@ public class VirtualAssistant implements AIListener {
         new QueryHandlerTask(this, responseListener).execute(request);
     }
 
+    public void reset(OnResponseListener responseListener) {
+        AIRequest request = new AIRequest();
+        request.setResetContexts(true);
+        AIEvent event = new AIEvent("reset");
+        request.setEvent(event);
+        new QueryHandlerTask(this, responseListener).execute(request);
+    }
+
     private static class QueryHandlerTask extends AsyncTask<AIRequest, Void, AIResponse> {
 
         private WeakReference<VirtualAssistant> assistantWeakRef;
@@ -114,6 +126,7 @@ public class VirtualAssistant implements AIListener {
             final AIRequest request = aiRequests[0];
             try {
                 VirtualAssistant assistant = assistantWeakRef.get();
+                Log.d("result request", request.toString());
                 return assistant.aiDataService.request(request);
             } catch (AIServiceException e) {
                 e.printStackTrace();
