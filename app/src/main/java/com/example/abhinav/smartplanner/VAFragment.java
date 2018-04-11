@@ -38,8 +38,10 @@ import com.google.firebase.firestore.Query;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.xml.sax.helpers.LocatorImpl;
 
 import java.lang.*;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -313,7 +315,25 @@ public class VAFragment extends Fragment {
                     });
                 } else if (query.getString(NAME).equals("class")) {
                     JSONObject params = request.getJSONObject(PARAMS);
-                    dbHandler.addClass(new ClassEvent(params), new OnResponseListener() {
+                    dbHandler.addEvent(new Event(params, Event.EVENT_CLASS), new OnResponseListener() {
+                        @Override
+                        public void onResponse(JSONObject response) throws JSONException {
+                            JSONArray res;
+                            if (response.getInt(STATUS) == STATUS_OK) {
+                                if (response.getBoolean(DATA)) {
+                                    res = speech.getJSONArray(SPEECH_POS);
+                                } else {
+                                    res = speech.getJSONArray(SPEECH_DUP);
+                                }
+                            } else {
+                                res = speech.getJSONArray(SPEECH_NEG);
+                            }
+                            updateChat(res.getString(r.nextInt(res.length())), "bot");
+                        }
+                    });
+                } else if (query.getString(NAME).equals("event")) {
+                    JSONObject params = request.getJSONObject(PARAMS);
+                    dbHandler.addEvent(new Event(params, Event.EVENT_CLASS), new OnResponseListener() {
                         @Override
                         public void onResponse(JSONObject response) throws JSONException {
                             JSONArray res;
@@ -343,7 +363,12 @@ public class VAFragment extends Fragment {
                 @Override
                 public void onResponse(JSONObject response) throws JSONException {
                     if (response.getInt(STATUS) == STATUS_OK) {
-                        assistant.handleQuery(response.getString(DATA), aiResponseListener);
+                        String data = response.getString(DATA);
+                        if (data.split("-").length < 5 && data.toLowerCase().contains("abort")) {
+                            assistant.reset(aiResponseListener);
+                        } else {
+                            assistant.handleQuery(data, aiResponseListener);
+                        }
                     } else {
                         Toast.makeText(getContext(), response.getString(DATA), Toast.LENGTH_SHORT).show();
                     }

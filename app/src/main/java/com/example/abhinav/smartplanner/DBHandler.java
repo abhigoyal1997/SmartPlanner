@@ -12,6 +12,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -34,12 +35,12 @@ public class DBHandler {
 
     private CollectionReference dbChat;
     private CollectionReference dbCourses;
-    private CollectionReference dbClasses;
+    private CollectionReference dbEvents;
 
     public void init(String uid) {
         dbChat = FirebaseFirestore.getInstance().collection("users").document(uid).collection("chat");
         dbCourses = FirebaseFirestore.getInstance().collection("users").document(uid).collection("courses");
-        dbClasses = FirebaseFirestore.getInstance().collection("users").document(uid).collection("classes");
+        dbEvents = FirebaseFirestore.getInstance().collection("users").document(uid).collection("events");
     }
 
     public static DBHandler getInstance() {
@@ -146,15 +147,122 @@ public class DBHandler {
         });
     }
 
-    public void addClass(final ClassEvent c, final OnResponseListener responseListener) {
-//        try {
-//
-//        } catch (JSONException e) {
-//            e.printStackTrace();
+//    public void addEvent(final Event c, final boolean ignoreClash, final OnResponseListener responseListener) {
+//        if (ignoreClash) {
+//            addEvent(c, responseListener);
+//            return;
 //        }
+
+//        dbEvents.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+//            @Override
+//            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+//                final JSONObject response = new JSONObject();
+//                try {
+//                    if (task.isSuccessful()) {
+//                        QuerySnapshot snapshot = task.getResult();
+//                        if (snapshot != null && !snapshot.isEmpty()) {
+//                            for (QueryDocumentSnapshot doc : snapshot) {
+//                                if (isClash(c, doc.toObject(Event.class))) {
+//                                    response.put(STATUS, STATUS_OK);
+//                                    response.put(DATA, false);
+//                                    responseListener.onResponse(response);
+//                                    return;
+//                                }
+//                            }
+//                        }
+//                        addEvent(c, responseListener);
+//                    } else {
+//                        response.put(STATUS, STATUS_ERROR);
+//                        response.put(DATA, R.string.error_toast);
+//                        responseListener.onResponse(response);
+//                    }
+//                } catch (JSONException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        });
+//    }
+
+    public void addEvent(final Event c, final OnResponseListener responseListener) {
+        if (c.courseCode != null && !c.courseCode.equals("")) {
+            dbCourses.document(c.courseCode).get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                @Override
+                public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                    final JSONObject response = new JSONObject();
+                    try {
+                        if (task.isSuccessful()) {
+                            DocumentSnapshot doc = task.getResult();
+                            if (doc != null && doc.exists()) {
+                                addEventToDb(c, responseListener);
+                            } else {
+                                response.put(STATUS, STATUS_OK);
+                                response.put(DATA, false);
+                                responseListener.onResponse(response);
+                            }
+                        } else {
+                            response.put(STATUS, STATUS_ERROR);
+                            response.put(DATA, R.string.error_toast);
+                            responseListener.onResponse(response);
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        } else {
+            addEventToDb(c, responseListener);
+        }
     }
 
-    public void addToDoTask(final ToDoTask toDoTask, final OnResponseListener responseListener){
+    public void addToDoTask(final ToDoTask toDoTask, final OnResponseListener responseListener) {
 
     }
+
+    public void getEvents(int week, OnResponseListener responseListener) {
+
+    }
+
+    private void addEventToDb(Event c, final OnResponseListener responseListener) {
+        dbEvents.add(c).addOnCompleteListener(new OnCompleteListener<DocumentReference>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentReference> task) {
+                final JSONObject response = new JSONObject();
+                try {
+                    if (task.isSuccessful()) {
+                        response.put(STATUS, STATUS_OK);
+                        response.put(DATA, true);
+                        responseListener.onResponse(response);
+                    } else {
+                        response.put(STATUS, STATUS_ERROR);
+                        response.put(DATA, R.string.error_toast);
+                        responseListener.onResponse(response);
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+//    private boolean isClash(Event e1, Event e2) throws JSONException {
+//        if (!e1.recur) {
+//            if (!e2.recur) {
+//                return e1.date == e2.date && !((e1.from < e2.from && e1.to <= e2.from) || (e1.to > e2.to && e1.from >= e2.to));
+//            }
+//
+//            ArrayList<Integer> daysList = new ArrayList<>();
+//            JSONArray jArray = e2.days;
+//            if (jArray != null) {
+//                for (int i=0;i<jArray.length();i++){
+//                    daysList.add(jArray.getInt(i));
+//                }
+//            }
+////            if (daysList.contains(e1.days.getInt(0))) {
+////
+////            }
+//        }
+//        return true;
+//    }
+
+
 }
