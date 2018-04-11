@@ -7,6 +7,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.design.widget.NavigationView;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -15,7 +16,6 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
@@ -24,45 +24,42 @@ import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.firebase.ui.auth.AuthUI;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ThrowOnExtraProperties;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.Collections;
+import java.util.List;
 
 public class HomeActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
             OnFragmentInteractionListener{
 
-    private static final int LOGIN_REQUEST = 99;
-    private static final int LOGOUT_REQUEST = 98;
+    private static final int RC_SIGN_IN = 123;
+
     private DrawerLayout mDrawer = null;
     private Toolbar mToolbar = null;
     private FragmentManager mFManager = null;
     private Resources mRes = null;
     private NavigationView mNavigationView;
 
+    private boolean persistence = false;
+
+    List<AuthUI.IdpConfig> providers = Collections.singletonList(
+            new AuthUI.IdpConfig.GoogleBuilder().build()
+    );
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_home);
         mRes = getResources();
-        mToolbar = findViewById(R.id.toolbar);
-        mToolbar.setTitle(mRes.getString(R.string.nav_va));
-        setSupportActionBar(mToolbar);
-
-        mDrawer = findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, mDrawer, mToolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        mDrawer.addDrawerListener(toggle);
-        toggle.syncState();
-
-        mNavigationView = findViewById(R.id.nav_view);
-        mNavigationView.setNavigationItemSelectedListener(this);
-
-        FirebaseDatabase.getInstance().setPersistenceEnabled(true);
+        setContentView(R.layout.activity_splash);
     }
 
     @Override
@@ -83,11 +80,15 @@ public class HomeActivity extends AppCompatActivity
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == AccountManager.LOGIN_REQUEST) {
+        if (requestCode == RC_SIGN_IN) {
             if (resultCode == RESULT_OK) {
                 initializeUI();
-            } else if (resultCode == RESULT_CANCELED) {
-                finish();
+                if (!persistence) {
+                    FirebaseDatabase.getInstance().setPersistenceEnabled(true);
+                    persistence = true;
+                }
+            } else {
+                Toast.makeText(this, "Sign in failed!", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -100,32 +101,32 @@ public class HomeActivity extends AppCompatActivity
         mDrawer.closeDrawer(GravityCompat.START);
 
         Fragment fragment = null;
-        Class fragmentClass = null;
+        Class fragmentClassEvent = null;
         String fragmentName = null;
 
         switch (id) {
             case R.id.nav_cal:
-                fragmentClass = CalendarFragment.class;
+                fragmentClassEvent = CalendarFragment.class;
                 fragmentName = mRes.getString(R.string.nav_cal);
                 break;
             case R.id.nav_tasks:
-                fragmentClass = TasksFragment.class;
+                fragmentClassEvent = TasksFragment.class;
                 fragmentName = mRes.getString(R.string.nav_tasks);
                 break;
             case R.id.nav_eval:
-                fragmentClass = EvalFragment.class;
+                fragmentClassEvent = EvalFragment.class;
                 fragmentName = mRes.getString(R.string.nav_eval);
                 break;
             case R.id.nav_schedule:
-                fragmentClass = ScheduleFragment.class;
+                fragmentClassEvent = ScheduleFragment.class;
                 fragmentName = mRes.getString(R.string.nav_schedule);
                 break;
             case R.id.nav_settings:
-                fragmentClass = SettingsFragment.class;
+                fragmentClassEvent = SettingsFragment.class;
                 fragmentName = mRes.getString(R.string.nav_settings);
                 break;
             case R.id.nav_db:
-                fragmentClass = VAFragment.class;
+                fragmentClassEvent = VAFragment.class;
                 fragmentName = mRes.getString(R.string.nav_va);
                 break;
             case R.id.nav_logout:
@@ -134,7 +135,7 @@ public class HomeActivity extends AppCompatActivity
         }
 
         try {
-            fragment = (Fragment) fragmentClass.newInstance();
+            fragment = (Fragment) fragmentClassEvent.newInstance();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -156,9 +157,13 @@ public class HomeActivity extends AppCompatActivity
             Toast.makeText(this, "Not connected to internet!", Toast.LENGTH_SHORT).show();
             return;
         }
-        Intent i = new Intent(this, LoginActivity.class);
-        i.setAction(LoginActivity.ACTION_LOGOUT);
-        startActivityForResult(i, LOGOUT_REQUEST);
+        AuthUI.getInstance().signOut(this)
+                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                        finish();
+                    }
+                });
     }
 
     @Override
@@ -169,14 +174,30 @@ public class HomeActivity extends AppCompatActivity
     private void login() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
-            Intent i = new Intent(this, LoginActivity.class);
-            startActivityForResult(i, LOGIN_REQUEST);
+            startActivityForResult(AuthUI.getInstance().createSignInIntentBuilder()
+                    .setAvailableProviders(providers)
+                    .build(),RC_SIGN_IN);
         } else {
             initializeUI();
         }
     }
 
     private void initializeUI() {
+        setContentView(R.layout.activity_home);
+
+        mToolbar = findViewById(R.id.toolbar);
+        mToolbar.setTitle(mRes.getString(R.string.nav_va));
+        setSupportActionBar(mToolbar);
+
+        mDrawer = findViewById(R.id.drawer_layout);
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+                this, mDrawer, mToolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+        mDrawer.addDrawerListener(toggle);
+        toggle.syncState();
+
+        mNavigationView = findViewById(R.id.nav_view);
+        mNavigationView.setNavigationItemSelectedListener(this);
+
         View navHeaderView = mNavigationView.getHeaderView(0);
         ImageView navImageView = navHeaderView.findViewById(R.id.nav_header_image);
         TextView navNameView = navHeaderView.findViewById(R.id.nav_header_name);

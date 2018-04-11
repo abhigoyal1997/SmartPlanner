@@ -15,6 +15,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,14 +23,46 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
-import com.firebase.ui.database.FirebaseRecyclerAdapter;
+import com.firebase.ui.firestore.FirestoreRecyclerAdapter;
+import com.firebase.ui.firestore.FirestoreRecyclerOptions;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.Query;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.lang.*;
+import java.util.Date;
+import java.util.List;
+import java.util.Objects;
+import java.util.Random;
+
+import static com.example.abhinav.smartplanner.Constants.DATA;
+import static com.example.abhinav.smartplanner.Constants.NAME;
+import static com.example.abhinav.smartplanner.Constants.PARAMS;
+import static com.example.abhinav.smartplanner.Constants.QUERY;
+import static com.example.abhinav.smartplanner.Constants.QUERY_ADD;
+import static com.example.abhinav.smartplanner.Constants.QUERY_GET;
+import static com.example.abhinav.smartplanner.Constants.SPEECH;
+import static com.example.abhinav.smartplanner.Constants.SPEECH_DUP;
+import static com.example.abhinav.smartplanner.Constants.SPEECH_EMP;
+import static com.example.abhinav.smartplanner.Constants.SPEECH_NEG;
+import static com.example.abhinav.smartplanner.Constants.SPEECH_POS;
+import static com.example.abhinav.smartplanner.Constants.SPEECH_WAIT;
+import static com.example.abhinav.smartplanner.Constants.STATUS;
+import static com.example.abhinav.smartplanner.Constants.STATUS_OK;
+import static com.example.abhinav.smartplanner.Constants.TYPE;
+import static com.example.abhinav.smartplanner.Constants.TYPE_JSON;
+import static com.example.abhinav.smartplanner.Constants.TYPE_TEXT;
+import static com.example.abhinav.smartplanner.Constants.VALID;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -38,20 +71,23 @@ import com.google.firebase.database.FirebaseDatabase;
 public class VAFragment extends Fragment {
 
     private final int RECORD_PERMISSION_REQUEST = 99;
-    private final String DB_KEY_CHAT = "messages";
 
-    private OnFragmentInteractionListener mListener;
     private VirtualAssistant assistant;
 
     private RecyclerView chatView;
     private EditText newChatMsg;
-    private DatabaseReference dbChat;
-    private FirebaseRecyclerAdapter<ChatMessage, ChatViewHolder> chatAdapter;
+    private FirestoreRecyclerAdapter<ChatMessage, ChatViewHolder> adapter;
+    private ProgressBar progressBar;
+
+    private DBHandler dbHandler;
+    private OnResponseListener aiResponseListener;
+
+    FirestoreRecyclerOptions<ChatMessage> options;
+    String uid;
 
     private boolean flagFab = true;
 
     public VAFragment() {
-        // Required empty public constructor
     }
 
     public static VAFragment newInstance() {
@@ -66,11 +102,11 @@ public class VAFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
         final View r = inflater.inflate(R.layout.fragment_va, container, false);
-        assistant = new VirtualAssistant(this);
+        assistant = new VirtualAssistant();
 
         chatView = r.findViewById(R.id.chat_recycler_view);
+        progressBar = r.findViewById(R.id.loading_progress);
         newChatMsg = r.findViewById(R.id.chat_msg);
         RelativeLayout chatSendView = r.findViewById(R.id.chat_send);
 
@@ -79,17 +115,29 @@ public class VAFragment extends Fragment {
         chatView.setLayoutManager(linearLayoutManager);
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        String uid = user != null ? user.getUid() : "";
+        uid = user != null ? user.getUid() : "";
 
-        dbChat = FirebaseDatabase.getInstance().getReference().getRoot().child("users").child(uid);
-        dbChat.keepSynced(true);
+        dbHandler = DBHandler.getInstance();
+        dbHandler.init(uid);
+
+        aiResponseListener = new OnResponseListener() {
+            @Override
+            public void onResponse(JSONObject response) throws JSONException {
+                if (response.getInt(STATUS) == STATUS_OK) {
+                    if (response.getInt(TYPE) == TYPE_TEXT) {
+                        updateChat(response.getString(DATA), "bot");
+                    } else if (response.getInt(TYPE) == TYPE_JSON) {
+                        handleRequest(response.getJSONObject(DATA));
+                    }
+                }
+            }
+        };
 
         chatSendView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String message = newChatMsg.getText().toString().trim();
+                final String message = newChatMsg.getText().toString().trim();
                 if (!message.equals("")) {
-                    ChatMessage chatMessage = new ChatMessage(message, "user");
                     ConnectivityManager connectivityManager = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
                     NetworkInfo networkInfo = null;
                     if (connectivityManager != null) {
@@ -99,9 +147,7 @@ public class VAFragment extends Fragment {
                         Toast.makeText(getContext(), "Not connected to internet!", Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    dbChat.push().setValue(chatMessage);
-                    assistant.handleQuery(message);
-                    newChatMsg.setText("");
+                    updateChat(message, "user");
                 } else {
                     handleVoiceQuery();
                 }
@@ -117,18 +163,17 @@ public class VAFragment extends Fragment {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 ImageView fab_img = r.findViewById(R.id.fab_img);
-                Bitmap img = BitmapFactory.decodeResource(getResources(),R.drawable.ic_send_white);
-                Bitmap img1 = BitmapFactory.decodeResource(getResources(),R.drawable.ic_mic_white);
+                Bitmap img = BitmapFactory.decodeResource(getResources(), R.drawable.ic_send_white);
+                Bitmap img1 = BitmapFactory.decodeResource(getResources(), R.drawable.ic_mic_white);
 
 
-                if (s.toString().trim().length()!=0 && flagFab){
-                    imageViewAnimatedChange(getContext(),fab_img,img);
-                    flagFab=false;
+                if (s.toString().trim().length() != 0 && flagFab) {
+                    imageViewAnimatedChange(getContext(), fab_img, img);
+                    flagFab = false;
 
-                }
-                else if (s.toString().trim().length()==0){
-                    imageViewAnimatedChange(getContext(),fab_img,img1);
-                    flagFab=true;
+                } else if (s.toString().trim().length() == 0) {
+                    imageViewAnimatedChange(getContext(), fab_img, img1);
+                    flagFab = true;
 
                 }
 
@@ -140,27 +185,55 @@ public class VAFragment extends Fragment {
             }
         });
 
-        chatAdapter = new FirebaseRecyclerAdapter<ChatMessage, ChatViewHolder>(ChatMessage.class, R.layout.chat_list, ChatViewHolder.class, dbChat) {
+        Query query = FirebaseFirestore.getInstance()
+                .collection("users").document(uid)
+                .collection("chat").orderBy("timestamp");
+
+        options = new FirestoreRecyclerOptions.Builder<ChatMessage>()
+                .setQuery(query, ChatMessage.class).build();
+
+        adapter = new FirestoreRecyclerAdapter<ChatMessage, ChatViewHolder>(options) {
             @Override
-            protected void populateViewHolder(ChatViewHolder viewHolder, ChatMessage model, int position) {
-                if (model.getMsgUser().equals("user")) {
-                    viewHolder.rightText.setText(model.getMsgText());
+            protected void onBindViewHolder(@NonNull ChatViewHolder viewHolder, int position, @NonNull ChatMessage model) {
+                if (model.getSender().equals("user")) {
+                    viewHolder.rightText.setText(model.getText());
                     viewHolder.rightText.setVisibility(View.VISIBLE);
                     viewHolder.leftText.setVisibility(View.GONE);
                 } else {
-                    viewHolder.leftText.setText(model.getMsgText());
+                    viewHolder.leftText.setText(model.getText());
                     viewHolder.leftText.setVisibility(View.VISIBLE);
                     viewHolder.rightText.setVisibility(View.GONE);
                 }
             }
+
+            @NonNull
+            @Override
+            public ChatViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                View view = LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.view_chat, parent, false);
+                return new ChatViewHolder(view);
+            }
+
+            @Override
+            public void onDataChanged() {
+                super.onDataChanged();
+                progressBar.setVisibility(View.INVISIBLE);
+                chatView.setVisibility(View.VISIBLE);
+            }
+
+            @Override
+            public void onError(@NonNull FirebaseFirestoreException e) {
+                super.onError(e);
+                Toast.makeText(getContext(), "There was a problem while loading the chat!", Toast.LENGTH_SHORT).show();
+            }
         };
 
-        chatAdapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
+        adapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
             @Override
             public void onItemRangeInserted(int positionStart, int itemCount) {
                 super.onItemRangeInserted(positionStart, itemCount);
 
-                int msgCount = chatAdapter.getItemCount();
+                int msgCount = adapter.getItemCount();
                 int lastVisiblePosition = linearLayoutManager.findLastCompletelyVisibleItemPosition();
 
                 if (lastVisiblePosition == -1 ||
@@ -171,9 +244,121 @@ public class VAFragment extends Fragment {
             }
         });
 
-        chatView.setAdapter(chatAdapter);
+        chatView.setAdapter(adapter);
 
         return r;
+    }
+
+    private void handleRequest(final JSONObject request) {
+        Log.d("request", request.toString());
+        try {
+            JSONObject query = request.getJSONObject(QUERY);
+            final JSONObject speech = request.getJSONObject(SPEECH);
+            final Random r = new Random();
+            if (!query.getBoolean(VALID)) {
+                Log.d("query", request.toString());
+                JSONArray res = speech.getJSONArray(SPEECH_POS);
+                updateChat(res.getString(r.nextInt(res.length())), "bot");
+                return;
+            }
+
+            JSONArray wait = speech.getJSONArray(SPEECH_WAIT);
+            updateChat(wait.getString(r.nextInt(wait.length() - 1)), "bot");
+            if (query.getString(TYPE).equals(QUERY_GET)) {
+                if (query.getString(NAME).equals("course")) {
+                    dbHandler.getCourseList(new OnResponseListener() {
+                        @Override
+                        public void onResponse(JSONObject response) throws JSONException {
+                            if (response.getInt(STATUS) == STATUS_OK) {
+                                @SuppressWarnings("unchecked")
+                                List<String> courses = (List<String>) response.get(DATA);
+                                if (courses.isEmpty()) {
+                                    JSONArray res = speech.getJSONArray(SPEECH_EMP);
+                                    updateChat(res.getString(r.nextInt(res.length())), "bot");
+                                } else {
+                                    JSONArray res = speech.getJSONArray(SPEECH_POS);
+                                    StringBuilder builder = new StringBuilder();
+                                    for (String course : courses) {
+                                        builder.append(course);
+                                        builder.append('\n');
+                                    }
+                                    builder.deleteCharAt(builder.lastIndexOf("\n"));
+                                    updateChat(res.getString(r.nextInt(res.length())) + '\n' + builder.toString(), "bot");
+                                }
+                            } else {
+                                JSONArray res = speech.getJSONArray(SPEECH_NEG);
+                                updateChat(res.getString(r.nextInt(res.length())), "bot");
+                            }
+                        }
+                    });
+                }
+            } else if (query.getString(TYPE).equals(QUERY_ADD)) {
+                if (query.getString(NAME).equals("course")) {
+                    String courseCode = request.getJSONObject(PARAMS).getString("courseCode");
+                    dbHandler.addCourse(courseCode, new OnResponseListener() {
+                        @Override
+                        public void onResponse(JSONObject response) throws JSONException {
+                            JSONArray res;
+                            if (response.getInt(STATUS) == STATUS_OK) {
+                                if (response.getBoolean(DATA)) {
+                                    res = speech.getJSONArray(SPEECH_POS);
+                                } else {
+                                    res = speech.getJSONArray(SPEECH_DUP);
+                                }
+                            } else {
+                                res = speech.getJSONArray(SPEECH_NEG);
+                            }
+                            updateChat(res.getString(r.nextInt(res.length())), "bot");
+                        }
+                    });
+                } else if (query.getString(NAME).equals("class")) {
+                    JSONObject params = request.getJSONObject(PARAMS);
+                    dbHandler.addClass(new ClassEvent(params), new OnResponseListener() {
+                        @Override
+                        public void onResponse(JSONObject response) throws JSONException {
+                            JSONArray res;
+                            if (response.getInt(STATUS) == STATUS_OK) {
+                                if (response.getBoolean(DATA)) {
+                                    res = speech.getJSONArray(SPEECH_POS);
+                                } else {
+                                    res = speech.getJSONArray(SPEECH_DUP);
+                                }
+                            } else {
+                                res = speech.getJSONArray(SPEECH_NEG);
+                            }
+                            updateChat(res.getString(r.nextInt(res.length())), "bot");
+                        }
+                    });
+                }
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void updateChat(String message, String sender) {
+        ChatMessage chatMessage = new ChatMessage(message, sender, new Date());
+        if (Objects.equals(sender, "user")) {
+            dbHandler.addChat(chatMessage, new OnResponseListener() {
+                @Override
+                public void onResponse(JSONObject response) throws JSONException {
+                    if (response.getInt(STATUS) == STATUS_OK) {
+                        assistant.handleQuery(response.getString(DATA), aiResponseListener);
+                    } else {
+                        Toast.makeText(getContext(), response.getString(DATA), Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+            newChatMsg.setText("");
+        } else {
+            dbHandler.addChat(chatMessage);
+        }
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        adapter.startListening();
     }
 
     public void imageViewAnimatedChange(Context c, final ImageView v, final Bitmap new_image) {
@@ -210,29 +395,10 @@ public class VAFragment extends Fragment {
         v.startAnimation(anim_out);
     }
 
-
-    public void onAIQueryResult(String reply) {
-        if (!reply.equals("")) {
-            ChatMessage chatMessage = new ChatMessage(reply, "bot");
-            dbChat.push().setValue(chatMessage);
-        }
-    }
-
     @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        if (context instanceof OnFragmentInteractionListener) {
-            mListener = (OnFragmentInteractionListener) context;
-        } else {
-            throw new RuntimeException(context.toString()
-                    + " must implement OnFragmentInteractionListener");
-        }
-    }
-
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        mListener = null;
+    public void onStop() {
+        super.onStop();
+        adapter.stopListening();
     }
 
     public void handleVoiceQuery() {

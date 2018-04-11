@@ -1,10 +1,10 @@
 package com.example.abhinav.smartplanner;
 
 import android.os.AsyncTask;
+import android.support.v4.app.Fragment;
 import android.util.Log;
 
 import com.google.gson.JsonElement;
-import android.support.v4.app.Fragment;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -19,7 +19,10 @@ import ai.api.android.AIConfiguration;
 import ai.api.android.AIService;
 import ai.api.model.AIRequest;
 import ai.api.model.AIResponse;
+import ai.api.model.ResponseMessage;
 import ai.api.model.Result;
+
+import static com.example.abhinav.smartplanner.Constants.*;
 
 /**
  * Created by abhi on 7/4/18.
@@ -28,13 +31,12 @@ import ai.api.model.Result;
 public class VirtualAssistant implements AIListener {
 
     private final String API_TAG = "ai api";
+    private static final String queryUrl = "https://api.dialogflow.com/v1/query?v=20150910";
 
     private AIService aiService;
     private AIDataService aiDataService;
-    private Fragment fragment;
 
-    public VirtualAssistant(Fragment fragment) {
-        this.fragment = fragment;
+    public VirtualAssistant() {
         String AI_ACCESS_TOKEN = "cc87191fa725498285c56d55fa0f3b2f";
         final AIConfiguration config = new AIConfiguration(AI_ACCESS_TOKEN,
                 AIConfiguration.SupportedLanguages.English,
@@ -92,25 +94,26 @@ public class VirtualAssistant implements AIListener {
 
     }
 
-    public void handleQuery(String query) {
-        final AIRequest aiRequest = new AIRequest();
-        aiRequest.setQuery(query);
-        new QueryHandlerTask(this).execute(aiRequest);
+    public void handleQuery(String query, OnResponseListener responseListener) {
+        AIRequest request = new AIRequest(query);
+        new QueryHandlerTask(this, responseListener).execute(request);
     }
 
     private static class QueryHandlerTask extends AsyncTask<AIRequest, Void, AIResponse> {
 
-        private WeakReference<VirtualAssistant> assistantWeakReference;
+        private WeakReference<VirtualAssistant> assistantWeakRef;
+        private WeakReference<OnResponseListener> responseListenerWeakRef;
 
-        QueryHandlerTask(VirtualAssistant assistant) {
-            assistantWeakReference = new WeakReference<VirtualAssistant>(assistant);
+        QueryHandlerTask(VirtualAssistant assistant, OnResponseListener responseListener) {
+            assistantWeakRef = new WeakReference<>(assistant);
+            responseListenerWeakRef = new WeakReference<>(responseListener);
         }
 
         @Override
         protected AIResponse doInBackground(AIRequest... aiRequests) {
             final AIRequest request = aiRequests[0];
             try {
-                VirtualAssistant assistant = assistantWeakReference.get();
+                VirtualAssistant assistant = assistantWeakRef.get();
                 return assistant.aiDataService.request(request);
             } catch (AIServiceException e) {
                 e.printStackTrace();
@@ -121,20 +124,34 @@ public class VirtualAssistant implements AIListener {
         @Override
         protected void onPostExecute(AIResponse response) {
             super.onPostExecute(response);
-            VirtualAssistant assistant = assistantWeakReference.get();
-            if (response != null) {
-                Result result = response.getResult();
-                VAFragment fragment = (VAFragment) assistant.fragment;
-                fragment.onAIQueryResult(result.getFulfillment().getSpeech());
-                Log.d(assistant.API_TAG, result.getParameters().toString());
-                HomeActivity activity = (HomeActivity) assistant.fragment.getActivity();
-                JSONObject task = new JSONObject();
-                try {
-                    task.put("task", result.getAction());
-                } catch (JSONException e) {
-                    e.printStackTrace();
+            JSONObject res = new JSONObject();
+            try {
+                if (response != null) {
+                    Result result = response.getResult();
+                    Log.d("result", result.getFulfillment().toString());
+                    if (result.getFulfillment().getMessages().isEmpty()) {
+                        res.put(STATUS, STATUS_ERROR);
+                        res.put(DATA, R.string.error_toast);
+                    } else {
+                        ResponseMessage message = result.getFulfillment().getMessages().get(0);
+                        res.put(STATUS, STATUS_OK);
+                        if (message instanceof ResponseMessage.ResponsePayload) {
+                            ResponseMessage.ResponsePayload payload = (ResponseMessage.ResponsePayload) message;
+                            res.put(TYPE, TYPE_JSON);
+                            res.put(DATA, new JSONObject(payload.getPayload().toString()));
+                        } else if (message instanceof ResponseMessage.ResponseSpeech) {
+                            ResponseMessage.ResponseSpeech speech = (ResponseMessage.ResponseSpeech) message;
+                            res.put(TYPE, TYPE_TEXT);
+                            res.put(DATA, speech.getSpeech().get(0));
+                        }
+                    }
+                } else {
+                    res.put(STATUS, STATUS_ERROR);
+                    res.put(DATA, R.string.error_toast);
                 }
-                activity.handleTask(task);
+                responseListenerWeakRef.get().onResponse(res);
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
         }
     }

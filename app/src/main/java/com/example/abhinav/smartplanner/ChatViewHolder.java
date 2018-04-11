@@ -5,7 +5,7 @@ import android.view.View;
 import android.widget.TextView;
 
 /**
- * Created by abhi on 7/4/18.
+ * Created by abhi on 10/4/18.
  */
 
 public class ChatViewHolder extends RecyclerView.ViewHolder  {

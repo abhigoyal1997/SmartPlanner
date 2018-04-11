@@ -29,4 +29,5 @@
     <string name="title_activity_login2">Sign in</string>
     <string name="cal_action_month">Month View</string>
     <string name="cal_action_week">Week View</string>
+    <string name="error_toast">Something went wrong!</string>
 </resources>

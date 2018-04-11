@@ -1,40 +1,44 @@
 package com.example.abhinav.smartplanner;
 
+import java.util.Date;
+
 /**
  * Created by abhi on 7/4/18.
  */
 
 public class ChatMessage {
 
-    private String msgText;
-    private String msgUser;
+    private String text;
+    private String sender;
+    private Date timestamp;
 
-
-
-    public ChatMessage(String msgText, String msgUser){
-        this.msgText = msgText;
-        this.msgUser = msgUser;
-
+    public ChatMessage(String text, String sender, Date timestamp){
+        this.text = text;
+        this.sender = sender;
+        this.timestamp = timestamp;
     }
-
 
     public ChatMessage(){
 
     }
 
-    public String getMsgText() {
-        return msgText;
+    public String getText() {
+        return text;
     }
 
-    public void setMsgText(String msgText) {
-        this.msgText = msgText;
+    public void setText(String text) {
+        this.text = text;
     }
 
-    public String getMsgUser() {
-        return msgUser;
+    public String getSender() {
+        return sender;
     }
 
-    public void setMsgUser(String msgUser) {
-        this.msgUser = msgUser;
+    public void setSender(String sender) {
+        this.sender = sender;
+    }
+
+    public Date getTimestamp() {
+        return timestamp;
     }
 }
