@@ -4,10 +4,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -65,5 +62,12 @@ public class CalEvent {
         } catch (JSONException e) {
             e.printStackTrace();
         }
+
     }
+
+    public String getName() {
+        return name;
+    }
+    public String getTo() { return Long.toString(to); }
+
 }

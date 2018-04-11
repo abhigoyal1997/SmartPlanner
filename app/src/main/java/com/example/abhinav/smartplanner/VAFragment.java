@@ -40,32 +40,13 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.lang.*;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Random;
 
-import static com.example.abhinav.smartplanner.Constants.DATA;
-import static com.example.abhinav.smartplanner.Constants.NAME;
-import static com.example.abhinav.smartplanner.Constants.PARAMS;
-import static com.example.abhinav.smartplanner.Constants.QUERY;
-import static com.example.abhinav.smartplanner.Constants.QUERY_ADD;
-import static com.example.abhinav.smartplanner.Constants.QUERY_GET;
-import static com.example.abhinav.smartplanner.Constants.SPEECH;
-import static com.example.abhinav.smartplanner.Constants.SPEECH_DUP;
-import static com.example.abhinav.smartplanner.Constants.SPEECH_EMP;
-import static com.example.abhinav.smartplanner.Constants.SPEECH_NEG;
-import static com.example.abhinav.smartplanner.Constants.SPEECH_POS;
-import static com.example.abhinav.smartplanner.Constants.SPEECH_WAIT;
-import static com.example.abhinav.smartplanner.Constants.STATUS;
-import static com.example.abhinav.smartplanner.Constants.STATUS_ERROR;
-import static com.example.abhinav.smartplanner.Constants.STATUS_OK;
-import static com.example.abhinav.smartplanner.Constants.TYPE;
-import static com.example.abhinav.smartplanner.Constants.TYPE_JSON;
-import static com.example.abhinav.smartplanner.Constants.TYPE_TEXT;
-import static com.example.abhinav.smartplanner.Constants.VALID;
+import static com.example.abhinav.smartplanner.Constants.*;
 
 /**
  * A simple {@link Fragment} subclass.

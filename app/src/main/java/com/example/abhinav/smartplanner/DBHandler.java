@@ -292,7 +292,6 @@ public class DBHandler {
         });
     }
 
-
     public void addToDoTask(final ToDoTask toDoTask, final OnResponseListener responseListener) {
         dbTasks.add(toDoTask).addOnCompleteListener(new OnCompleteListener<DocumentReference>() {
             @Override
