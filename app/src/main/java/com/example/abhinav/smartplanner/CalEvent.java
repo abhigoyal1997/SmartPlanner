@@ -14,9 +14,10 @@ import java.util.List;
  * Created by abhi on 11/4/18.
  */
 
-public class Event {
+public class CalEvent {
     public static final int EVENT_CLASS = 1;
     public static final int EVENT_OTHER = 2;
+    public static final String[] DAY = new String[]{"Su", "M", "Tu", "W", "Th", "F", "Sa"};
 
     public String name;
     public int type;
@@ -27,8 +28,20 @@ public class Event {
     public long from;
     public long to;
 
-    public Event(JSONObject params, int type) {
+    public CalEvent(){}
+
+    public CalEvent(String name, int type, String courseCode, boolean recur, List<Integer> days, long date, long from, long to) {
+        this.name = name;
         this.type = type;
+        this.courseCode = courseCode;
+        this.recur = recur;
+        this.days = days;
+        this.date = date;
+        this.from = from;
+        this.to = to;
+    }
+
+    public CalEvent(JSONObject params) {
         try {
             this.recur = params.getBoolean("recur");
             this.days = new ArrayList<>();
@@ -41,15 +54,13 @@ public class Event {
             this.date = params.getLong("date");
             this.from = params.getLong("from");
             this.to = params.getLong("to");
+            this.name = params.getString("name");
             if (params.has("courseCode")) {
                 this.courseCode = params.getString("courseCode");
+                this.type = EVENT_CLASS;
             } else {
                 this.courseCode = null;
-            }
-            if (type == EVENT_CLASS) {
-                this.name = this.courseCode + " class";
-            } else {
-                this.name = params.getString("name");
+                this.type = EVENT_OTHER;
             }
         } catch (JSONException e) {
             e.printStackTrace();
