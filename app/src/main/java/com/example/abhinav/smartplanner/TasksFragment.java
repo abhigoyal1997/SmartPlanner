@@ -4,14 +4,24 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.Toast;
+
+import com.firebase.ui.firestore.FirestoreRecyclerAdapter;
+import com.firebase.ui.firestore.FirestoreRecyclerOptions;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.Query;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -22,23 +32,16 @@ import static com.example.abhinav.smartplanner.Constants.DATA;
 import static com.example.abhinav.smartplanner.Constants.STATUS;
 import static com.example.abhinav.smartplanner.Constants.STATUS_OK;
 
-
-/**
- * A simple {@link Fragment} subclass.
- * Activities that contain this fragment must implement the
- * {@link TasksFragment.OnFragmentInteractionListener} interface
- * to handle interaction events.
- * Use the {@link TasksFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
 public class TasksFragment extends Fragment {
 
     View rootView;
-    ArrayAdapter<String> adapter_;
-    ArrayList<String> list = new ArrayList<>();
     Button addTaskButton;
+    DBHandler dbHandler;
 
-    DBHandler dbHandler = DBHandler.getInstance();
+    private FirestoreRecyclerAdapter<ToDoTask, ToDoTaskViewHolder> adapter;
+    private RecyclerView taskView;
+    private ProgressBar progressBar;
+    FirestoreRecyclerOptions<ToDoTask> options;
 
     private OnFragmentInteractionListener mListener;
 
@@ -62,6 +65,77 @@ public class TasksFragment extends Fragment {
                              Bundle savedInstanceState) {
         rootView = inflater.inflate(R.layout.fragment_tasks, container, false);
         addTaskButton = rootView.findViewById(R.id.addTasksButton);
+        dbHandler = DBHandler.getInstance();
+
+
+
+
+
+
+        taskView = rootView.findViewById(R.id.task_recycler_view);
+        progressBar = rootView.findViewById(R.id.task_loading_progress);
+        final LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
+        linearLayoutManager.setStackFromEnd(true);
+        taskView.setLayoutManager(linearLayoutManager);
+//      TODO: Complete this query-- Query query = FirebaseFirestore.getInstance();
+        Query query = null;
+
+        options = new FirestoreRecyclerOptions.Builder<ToDoTask>()
+                .setQuery(query, ToDoTask.class).build();
+
+        adapter = new FirestoreRecyclerAdapter<ToDoTask, ToDoTaskViewHolder>(options) {
+            @Override
+            protected void onBindViewHolder(@NonNull ToDoTaskViewHolder viewHolder, int position, @NonNull ToDoTask model) {
+                viewHolder.title.setText(model.getTitle());
+                viewHolder.timestamp.setText(model.getDate() + " at " + model.getTime());
+            }
+
+            @NonNull
+            @Override
+            public ToDoTaskViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                View view = LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.view_chat, parent, false);
+                return new ToDoTaskViewHolder(view);
+            }
+
+            @Override
+            public void onDataChanged() {
+                super.onDataChanged();
+                progressBar.setVisibility(View.INVISIBLE);
+                taskView.setVisibility(View.VISIBLE);
+            }
+
+            @Override
+            public void onError(@NonNull FirebaseFirestoreException e) {
+                super.onError(e);
+                Toast.makeText(getContext(), "There was a problem while loading the tasks!", Toast.LENGTH_SHORT).show();
+            }
+        };
+
+        adapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
+            @Override
+            public void onItemRangeInserted(int positionStart, int itemCount) {
+                super.onItemRangeInserted(positionStart, itemCount);
+
+                int msgCount = adapter.getItemCount();
+                int lastVisiblePosition = linearLayoutManager.findLastCompletelyVisibleItemPosition();
+
+                if (lastVisiblePosition == -1 ||
+                        (positionStart >= (msgCount - 1) &&
+                                lastVisiblePosition == (positionStart - 1))) {
+                    taskView.scrollToPosition(positionStart);
+                }
+            }
+        });
+
+        taskView.setAdapter(adapter);
+
+
+
+
+
+
+
         return rootView;
     }
 
@@ -85,15 +159,6 @@ public class TasksFragment extends Fragment {
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        final ListView listview = rootView.findViewById(R.id.listview);
-        list.add("T1");
-        list.add("T2");
-        list.add("T3");
-        list.add("T4");
-        list.add("T5");
-        adapter_ = new ArrayAdapter<>(getActivity(),
-                android.R.layout.simple_list_item_1, android.R.id.text1, list);
-        listview.setAdapter(adapter_);
 
         addTaskButton.setOnClickListener(new View.OnClickListener() {
             @Override
