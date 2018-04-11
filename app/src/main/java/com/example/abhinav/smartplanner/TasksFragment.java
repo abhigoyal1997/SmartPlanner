@@ -1,12 +1,26 @@
 package com.example.abhinav.smartplanner;
 
+import android.app.Activity;
 import android.content.Context;
-import android.net.Uri;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ListView;
+import android.widget.Toast;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+
+import static com.example.abhinav.smartplanner.Constants.DATA;
+import static com.example.abhinav.smartplanner.Constants.STATUS;
+import static com.example.abhinav.smartplanner.Constants.STATUS_OK;
 
 
 /**
@@ -18,14 +32,13 @@ import android.view.ViewGroup;
  * create an instance of this fragment.
  */
 public class TasksFragment extends Fragment {
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
 
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
+    View rootView;
+    ArrayAdapter<String> adapter_;
+    ArrayList<String> list = new ArrayList<>();
+    Button addTaskButton;
+
+    DBHandler dbHandler = DBHandler.getInstance();
 
     private OnFragmentInteractionListener mListener;
 
@@ -33,45 +46,23 @@ public class TasksFragment extends Fragment {
         // Required empty public constructor
     }
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment TasksFragment.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static TasksFragment newInstance(String param1, String param2) {
-        TasksFragment fragment = new TasksFragment();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
-        return fragment;
-    }
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
-        }
+
+    }
+
+    public static TasksFragment newInstance() {
+        TasksFragment fragment = new TasksFragment();
+        return fragment;
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_tasks, container, false);
-    }
-
-    // TODO: Rename method, update argument and hook method into UI event
-    public void onButtonPressed(Uri uri) {
-        if (mListener != null) {
-            mListener.onFragmentInteraction(uri);
-        }
+        rootView = inflater.inflate(R.layout.fragment_tasks, container, false);
+        addTaskButton = rootView.findViewById(R.id.addTasksButton);
+        return rootView;
     }
 
     @Override
@@ -89,5 +80,49 @@ public class TasksFragment extends Fragment {
     public void onDetach() {
         super.onDetach();
         mListener = null;
+    }
+
+    @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        final ListView listview = rootView.findViewById(R.id.listview);
+        list.add("T1");
+        list.add("T2");
+        list.add("T3");
+        list.add("T4");
+        list.add("T5");
+        adapter_ = new ArrayAdapter<>(getActivity(),
+                android.R.layout.simple_list_item_1, android.R.id.text1, list);
+        listview.setAdapter(adapter_);
+
+        addTaskButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(getActivity(), AddTaskActivity.class);
+                startActivityForResult(intent, 1);
+            }
+        });
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        getActivity();
+        if(requestCode == 1 && resultCode == Activity.RESULT_OK) {
+            String title = data.getStringExtra("title");
+            String date = data.getStringExtra("date");
+            String time = data.getStringExtra("time");
+            ToDoTask toDoTask = new ToDoTask(title, date, time);
+            dbHandler.addToDoTask(toDoTask, new OnResponseListener() {
+                @Override
+                public void onResponse(JSONObject response) throws JSONException {
+                    if (response.getInt(STATUS) == STATUS_OK) {
+
+                    } else {
+                        Toast.makeText(getContext(), response.getString(DATA), Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+        }
     }
 }
