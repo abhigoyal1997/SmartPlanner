@@ -29,10 +29,19 @@ import com.prolificinteractive.materialcalendarview.CalendarMode;
 import com.prolificinteractive.materialcalendarview.MaterialCalendarView;
 import com.prolificinteractive.materialcalendarview.OnDateSelectedListener;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
+
+import static com.example.abhinav.smartplanner.Constants.DATA;
+import static com.example.abhinav.smartplanner.Constants.STATUS;
+import static com.example.abhinav.smartplanner.Constants.STATUS_OK;
+import static com.example.abhinav.smartplanner.Constants.TYPE;
 
 public class CalendarFragment extends Fragment {
     private OnFragmentInteractionListener mListener = null;
@@ -45,7 +54,7 @@ public class CalendarFragment extends Fragment {
     private RecyclerView.Adapter<ToDoTaskViewHolder> adapter;
     private RecyclerView taskView;
     FirestoreRecyclerOptions<ToDoTask> options;
-    List<ToDoTask> tasks;
+    List<ToDoTask> tasks = new ArrayList<>();
 
     Query query;
 
@@ -83,20 +92,26 @@ public class CalendarFragment extends Fragment {
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         uid = user != null ? user.getUid() : "";
+        dbHandler = DBHandler.getInstance();
 
         calendarView.setOnDateChangedListener(new OnDateSelectedListener() {
             @Override
             public void onDateSelected(@NonNull MaterialCalendarView widget, @NonNull CalendarDay date, boolean selected) {
-                //TODO: use date here to write query
-                query = FirebaseFirestore.getInstance()
-                        .collection("users").document(uid)
-                        .collection("tasks").orderBy("date");
-                options = new FirestoreRecyclerOptions.Builder<ToDoTask>()
-                        .setQuery(query, ToDoTask.class).build();
+                dbHandler.getTasks(date.getDate().getTime(), date.getDate().getTime(), new OnResponseListener() {
+                    @Override
+                    public void onResponse(JSONObject response) throws JSONException {
+                        if (response.getInt(STATUS) == STATUS_OK) {
+                            tasks = (List<ToDoTask>) response.get(DATA);
+                            adapter.notifyDataSetChanged();
+                        } else{
+                            Toast.makeText(getActivity().getApplicationContext(), "Unable to fiew today's tasks", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
             }
         });
 
-        taskView = view.findViewById(R.id.task_recycler_view);
+        taskView = view.findViewById(R.id.calendar_recycler_view);
         final LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
         taskView.setLayoutManager(linearLayoutManager);
 
