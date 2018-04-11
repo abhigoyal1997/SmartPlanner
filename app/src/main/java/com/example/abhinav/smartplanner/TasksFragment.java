@@ -19,6 +19,8 @@ import android.widget.Toast;
 
 import com.firebase.ui.firestore.FirestoreRecyclerAdapter;
 import com.firebase.ui.firestore.FirestoreRecyclerOptions;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
@@ -33,6 +35,8 @@ import static com.example.abhinav.smartplanner.Constants.STATUS;
 import static com.example.abhinav.smartplanner.Constants.STATUS_OK;
 
 public class TasksFragment extends Fragment {
+
+    String uid;
 
     View rootView;
     Button addTaskButton;
@@ -71,14 +75,16 @@ public class TasksFragment extends Fragment {
 
 
 
-
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        uid = user != null ? user.getUid() : "";
         taskView = rootView.findViewById(R.id.task_recycler_view);
         progressBar = rootView.findViewById(R.id.task_loading_progress);
         final LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
         linearLayoutManager.setStackFromEnd(true);
         taskView.setLayoutManager(linearLayoutManager);
-//      TODO: Complete this query-- Query query = FirebaseFirestore.getInstance();
-        Query query = null;
+        Query query = FirebaseFirestore.getInstance()
+                .collection("users").document(uid)
+                .collection("tasks").orderBy("timestamp");
 
         options = new FirestoreRecyclerOptions.Builder<ToDoTask>()
                 .setQuery(query, ToDoTask.class).build();
