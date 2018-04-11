@@ -36,11 +36,13 @@ public class DBHandler {
     private CollectionReference dbChat;
     private CollectionReference dbCourses;
     private CollectionReference dbEvents;
+    private CollectionReference dbTasks;
 
     public void init(String uid) {
         dbChat = FirebaseFirestore.getInstance().collection("users").document(uid).collection("chat");
         dbCourses = FirebaseFirestore.getInstance().collection("users").document(uid).collection("courses");
         dbEvents = FirebaseFirestore.getInstance().collection("users").document(uid).collection("events");
+        dbTasks = FirebaseFirestore.getInstance().collection("users").document(uid).collection("tasks");
     }
 
     public static DBHandler getInstance() {
@@ -215,7 +217,25 @@ public class DBHandler {
     }
 
     public void addToDoTask(final ToDoTask toDoTask, final OnResponseListener responseListener) {
-
+        dbTasks.add(toDoTask).addOnCompleteListener(new OnCompleteListener<DocumentReference>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentReference> task) {
+                final JSONObject response = new JSONObject();
+                try {
+                    if (task.isSuccessful()) {
+                        response.put(STATUS, STATUS_OK);
+                        response.put(DATA, true);
+                        responseListener.onResponse(response);
+                    } else {
+                        response.put(STATUS, STATUS_ERROR);
+                        response.put(DATA, R.string.error_toast);
+                        responseListener.onResponse(response);
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     public void getEvents(int week, OnResponseListener responseListener) {

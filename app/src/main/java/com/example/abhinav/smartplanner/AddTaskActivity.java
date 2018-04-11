@@ -12,7 +12,12 @@ import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.TimePicker;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
 
 public class AddTaskActivity extends AppCompatActivity implements View.OnClickListener{
     Button addTaskDone;
@@ -42,10 +47,25 @@ public class AddTaskActivity extends AppCompatActivity implements View.OnClickLi
                 String title = e_title.getText().toString();
                 String date = txtDate.getText().toString();
                 String time = txtTime.getText().toString();
+
+                Long dateMilli = null, timeMilli;
+                String[] timeParts = time.split(":");
+                timeMilli = (Long.valueOf(timeParts[0]) * 60 + Long.valueOf(timeParts[1])) * 60 * 1000;
+                DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy", Locale.US);
+                Date date_d = null;
+                try {
+                    date_d = dateFormat.parse(date);
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
+                if (date_d != null) {
+                    dateMilli = date_d.getTime();
+                }
+
                 Intent returnIntent = new Intent();
                 returnIntent.putExtra("title", title);
-                returnIntent.putExtra("date", date);
-                returnIntent.putExtra("time", time);
+                returnIntent.putExtra("date", dateMilli);
+                returnIntent.putExtra("time", timeMilli);
                 setResult(Activity.RESULT_OK, returnIntent);
                 finish();
             }

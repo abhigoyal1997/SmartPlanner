@@ -8,7 +8,11 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
@@ -19,16 +23,23 @@ import android.widget.Toast;
 
 import com.firebase.ui.firestore.FirestoreRecyclerAdapter;
 import com.firebase.ui.firestore.FirestoreRecyclerOptions;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QuerySnapshot;
+import com.prolificinteractive.materialcalendarview.CalendarDay;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 import static com.example.abhinav.smartplanner.Constants.DATA;
 import static com.example.abhinav.smartplanner.Constants.STATUS;
@@ -39,7 +50,6 @@ public class TasksFragment extends Fragment {
     String uid;
 
     View rootView;
-    Button addTaskButton;
     DBHandler dbHandler;
 
     private FirestoreRecyclerAdapter<ToDoTask, ToDoTaskViewHolder> adapter;
@@ -56,6 +66,7 @@ public class TasksFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);
 
     }
 
@@ -68,7 +79,6 @@ public class TasksFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         rootView = inflater.inflate(R.layout.fragment_tasks, container, false);
-        addTaskButton = rootView.findViewById(R.id.addTasksButton);
         dbHandler = DBHandler.getInstance();
 
 
@@ -80,11 +90,10 @@ public class TasksFragment extends Fragment {
         taskView = rootView.findViewById(R.id.task_recycler_view);
         progressBar = rootView.findViewById(R.id.task_loading_progress);
         final LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
-        linearLayoutManager.setStackFromEnd(true);
         taskView.setLayoutManager(linearLayoutManager);
         Query query = FirebaseFirestore.getInstance()
                 .collection("users").document(uid)
-                .collection("tasks").orderBy("timestamp");
+                .collection("tasks").orderBy("date");
 
         options = new FirestoreRecyclerOptions.Builder<ToDoTask>()
                 .setQuery(query, ToDoTask.class).build();
@@ -93,14 +102,20 @@ public class TasksFragment extends Fragment {
             @Override
             protected void onBindViewHolder(@NonNull ToDoTaskViewHolder viewHolder, int position, @NonNull ToDoTask model) {
                 viewHolder.title.setText(model.getTitle());
-                viewHolder.timestamp.setText(model.getDate() + " at " + model.getTime());
+                Long millis = model.getTime();
+                String hm = String.format("%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
+                        TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis)), Locale.US);
+                Date date = new Date(model.getDate());
+                String[] dateParts = date.toString().split(" ");
+                String date_s = dateParts[0] + " " + dateParts[1] + " " + dateParts[2] + " " + dateParts[5];
+                viewHolder.timestamp.setText(date_s + " at " + hm);
             }
 
             @NonNull
             @Override
             public ToDoTaskViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
                 View view = LayoutInflater.from(parent.getContext())
-                        .inflate(R.layout.view_chat, parent, false);
+                        .inflate(R.layout.task_list_item, parent, false);
                 return new ToDoTaskViewHolder(view);
             }
 
@@ -136,13 +151,25 @@ public class TasksFragment extends Fragment {
 
         taskView.setAdapter(adapter);
 
-
-
-
-
-
-
         return rootView;
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        inflater.inflate(R.menu.add_task, menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        switch (id) {
+            case R.id.addTasksButton:
+                Intent intent = new Intent(getActivity(), AddTaskActivity.class);
+                startActivityForResult(intent, 1);
+                break;
+        }
+        return true;
     }
 
     @Override
@@ -163,16 +190,20 @@ public class TasksFragment extends Fragment {
     }
 
     @Override
+    public void onStart(){
+        super.onStart();
+        adapter.startListening();
+    }
+
+    @Override
+    public void onStop(){
+        super.onStop();
+        adapter.stopListening();
+    }
+
+    @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-
-        addTaskButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(getActivity(), AddTaskActivity.class);
-                startActivityForResult(intent, 1);
-            }
-        });
     }
 
     @Override
@@ -181,8 +212,8 @@ public class TasksFragment extends Fragment {
         getActivity();
         if(requestCode == 1 && resultCode == Activity.RESULT_OK) {
             String title = data.getStringExtra("title");
-            String date = data.getStringExtra("date");
-            String time = data.getStringExtra("time");
+            Long date = data.getLongExtra("date", -1);
+            Long time = data.getLongExtra("time",-1);
             ToDoTask toDoTask = new ToDoTask(title, date, time);
             dbHandler.addToDoTask(toDoTask, new OnResponseListener() {
                 @Override

@@ -6,20 +6,24 @@ package com.example.abhinav.smartplanner;
 
 class ToDoTask {
     String title;
-    String date;
-    String time;
+    long date;
+    long time;
 
-    public ToDoTask(String title, String date, String time){
+    public ToDoTask(String title, long date, long time){
         this.time = time;
         this.date = date;
         this.title = title;
     }
 
-    public String getDate() {
+    public ToDoTask() {
+
+    }
+
+    public long getDate() {
         return date;
     }
 
-    public String getTime() {
+    public long getTime() {
         return time;
     }
 
@@ -27,11 +31,11 @@ class ToDoTask {
         return title;
     }
 
-    public void setDate(String date) {
+    public void setDate(long date) {
         this.date = date;
     }
 
-    public void setTime(String time) {
+    public void setTime(long time) {
         this.time = time;
     }
 
