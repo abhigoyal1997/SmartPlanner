@@ -251,6 +251,44 @@ public class DBHandler {
         });
     }
 
+    public void getTasks(long from, long to, final OnResponseListener responseListener) {
+        Query query = dbTasks;
+
+        if (to > from) {
+            query = dbTasks.whereGreaterThan("date", from)
+                    .whereLessThan("date", to)
+                    .orderBy("date");
+            Log.d("get events", String.valueOf(to) + " " + from);
+        } else if (to == from){
+            query = dbTasks.whereEqualTo("date", from)
+                    .orderBy("time");
+        }
+        query.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                JSONObject response = new JSONObject();
+                try {
+                    if (task.isSuccessful()) {
+                        List<ToDoTask> toDoTasks = new ArrayList<>();
+                        for (QueryDocumentSnapshot doc : task.getResult()) {
+                            toDoTasks.add(doc.toObject(ToDoTask.class));
+                        }
+                        response.put(STATUS, STATUS_OK);
+                        response.put(DATA, toDoTasks);
+                    } else {
+                        Log.d("get events", task.getException().toString());
+                        response.put(STATUS, STATUS_ERROR);
+                        response.put(DATA, R.string.error_toast);
+                    }
+                    Log.d("get-events", response.toString());
+                    responseListener.onResponse(response);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
 
     public void addToDoTask(final ToDoTask toDoTask, final OnResponseListener responseListener) {
         dbTasks.add(toDoTask).addOnCompleteListener(new OnCompleteListener<DocumentReference>() {
