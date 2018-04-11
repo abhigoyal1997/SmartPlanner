@@ -17,8 +17,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import static com.example.abhinav.smartplanner.Constants.DATA;
@@ -253,7 +255,7 @@ public class DBHandler {
 
     public void getTasks(long from, long to, final OnResponseListener responseListener) {
         Query query = dbTasks;
-
+        Log.d("tasks", String.valueOf(from) + " " + to + " " + new Date().getTime());
         if (to > from) {
             query = dbTasks.whereGreaterThan("date", from)
                     .whereLessThan("date", to)
@@ -273,6 +275,7 @@ public class DBHandler {
                         for (QueryDocumentSnapshot doc : task.getResult()) {
                             toDoTasks.add(doc.toObject(ToDoTask.class));
                         }
+                        Log.d("tasks", String.valueOf(toDoTasks.size()));
                         response.put(STATUS, STATUS_OK);
                         response.put(DATA, toDoTasks);
                     } else {

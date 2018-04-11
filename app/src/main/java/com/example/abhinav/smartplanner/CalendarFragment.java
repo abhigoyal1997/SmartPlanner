@@ -7,25 +7,17 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import com.firebase.ui.firestore.FirestoreRecyclerAdapter;
-import com.firebase.ui.firestore.FirestoreRecyclerOptions;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.FirebaseFirestoreException;
-import com.google.firebase.firestore.Query;
 import com.prolificinteractive.materialcalendarview.CalendarDay;
-import com.prolificinteractive.materialcalendarview.CalendarMode;
 import com.prolificinteractive.materialcalendarview.MaterialCalendarView;
 import com.prolificinteractive.materialcalendarview.OnDateSelectedListener;
 
@@ -41,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 import static com.example.abhinav.smartplanner.Constants.DATA;
 import static com.example.abhinav.smartplanner.Constants.STATUS;
 import static com.example.abhinav.smartplanner.Constants.STATUS_OK;
-import static com.example.abhinav.smartplanner.Constants.TYPE;
 
 public class CalendarFragment extends Fragment {
     private OnFragmentInteractionListener mListener = null;
@@ -51,12 +42,12 @@ public class CalendarFragment extends Fragment {
     DBHandler dbHandler;
     String uid;
 
-    private RecyclerView.Adapter<ToDoTaskViewHolder> adapter;
+    private RecyclerView.Adapter<ToDoTaskViewHolder> taskAdapter;
+//    private RecyclerView.Adapter<CalEventHolder> eventAdapter;
     private RecyclerView taskView;
-    FirestoreRecyclerOptions<ToDoTask> options;
+    private RecyclerView eventView;
     List<ToDoTask> tasks = new ArrayList<>();
-
-    Query query;
+    List<CalEvent> events = new ArrayList<>();
 
     public CalendarFragment() {
         // Required empty public constructor
@@ -97,17 +88,7 @@ public class CalendarFragment extends Fragment {
         calendarView.setOnDateChangedListener(new OnDateSelectedListener() {
             @Override
             public void onDateSelected(@NonNull MaterialCalendarView widget, @NonNull CalendarDay date, boolean selected) {
-                dbHandler.getTasks(date.getDate().getTime(), date.getDate().getTime(), new OnResponseListener() {
-                    @Override
-                    public void onResponse(JSONObject response) throws JSONException {
-                        if (response.getInt(STATUS) == STATUS_OK) {
-                            tasks = (List<ToDoTask>) response.get(DATA);
-                            adapter.notifyDataSetChanged();
-                        } else{
-                            Toast.makeText(getActivity().getApplicationContext(), "Unable to fiew today's tasks", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                });
+                fetchCalList(date);
             }
         });
 
@@ -115,14 +96,14 @@ public class CalendarFragment extends Fragment {
         final LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
         taskView.setLayoutManager(linearLayoutManager);
 
-        adapter = new RecyclerView.Adapter<ToDoTaskViewHolder>() {
+        taskAdapter = new RecyclerView.Adapter<ToDoTaskViewHolder>() {
             @Override
             public void onBindViewHolder(@NonNull ToDoTaskViewHolder viewHolder, int position) {
                 ToDoTask model = tasks.get(position);
                 viewHolder.title.setText(model.getTitle());
                 Long millis = model.getTime();
-                String hm = String.format("%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
-                        TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis)), Locale.US);
+                String hm = String.format(Locale.US, "%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
+                        TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis)));
                 Date date = new Date(model.getDate());
                 String[] dateParts = date.toString().split(" ");
                 String date_s = dateParts[0] + " " + dateParts[1] + " " + dateParts[2] + " " + dateParts[5];
@@ -143,12 +124,12 @@ public class CalendarFragment extends Fragment {
             }
         };
 
-        adapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
+        taskAdapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
             @Override
             public void onItemRangeInserted(int positionStart, int itemCount) {
                 super.onItemRangeInserted(positionStart, itemCount);
 
-                int msgCount = adapter.getItemCount();
+                int msgCount = taskAdapter.getItemCount();
                 int lastVisiblePosition = linearLayoutManager.findLastCompletelyVisibleItemPosition();
 
                 if (lastVisiblePosition == -1 ||
@@ -159,9 +140,35 @@ public class CalendarFragment extends Fragment {
             }
         });
 
-        taskView.setAdapter(adapter);
+        taskView.setAdapter(taskAdapter);
+        fetchCalList(CalendarDay.today());
 
         return view;
+    }
+
+    private void fetchCalList(CalendarDay date) {
+        dbHandler.getTasks(date.getDate().getTime(), date.getDate().getTime(), new OnResponseListener() {
+            @Override
+            public void onResponse(JSONObject response) throws JSONException {
+                if (response.getInt(STATUS) == STATUS_OK) {
+                    tasks = (List<ToDoTask>) response.get(DATA);
+                    taskAdapter.notifyDataSetChanged();
+                } else{
+                    Toast.makeText(getActivity().getApplicationContext(), "Unable to fetch today's tasks", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        dbHandler.getEvents(date.getDate().getTime(), date.getDate().getTime(), new OnResponseListener() {
+            @Override
+            public void onResponse(JSONObject response) throws JSONException {
+                if (response.getInt(STATUS) == STATUS_OK) {
+                    events = (List<CalEvent>) response.get(DATA);
+                    taskAdapter.notifyDataSetChanged();
+                } else{
+                    Toast.makeText(getActivity().getApplicationContext(), "Unable to fetch today's events", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 
     @Override
@@ -176,6 +183,7 @@ public class CalendarFragment extends Fragment {
         switch (id) {
             case R.id.cal_action_today:
                 selectDate(CalendarDay.today());
+                fetchCalList(CalendarDay.today());
                 break;
         }
         return true;
