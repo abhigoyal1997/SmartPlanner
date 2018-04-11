@@ -3,68 +3,114 @@ package com.example.abhinav.smartplanner;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
+import android.widget.Toast;
+
+import com.firebase.ui.firestore.FirestoreRecyclerAdapter;
+import com.firebase.ui.firestore.FirestoreRecyclerOptions;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.Query;
 
 
 /**
  * A simple {@link Fragment} subclass.
  * Activities that contain this fragment must implement the
- * {@link EvalFragment.OnFragmentInteractionListener} interface
+ * {@link OnFragmentInteractionListener} interface
  * to handle interaction events.
  * Use the {@link EvalFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
 public class EvalFragment extends Fragment {
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
 
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
 
     private OnFragmentInteractionListener mListener;
+    private FirestoreRecyclerAdapter<CalEvent, CalEventHolder> adapter;
+
+    private RecyclerView eventsView;
+    private ProgressBar progressBar;
+
+    private DBHandler dbHandler;
+
 
     public EvalFragment() {
         // Required empty public constructor
     }
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment EvalFragment.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static EvalFragment newInstance(String param1, String param2) {
+    public static EvalFragment newInstance() {
         EvalFragment fragment = new EvalFragment();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
         return fragment;
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
-        }
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_eval, container, false);
+        final View r = inflater.inflate(R.layout.fragment_eval, container, false);
+
+        eventsView = r.findViewById(R.id.events_recycler_view);
+        progressBar = r.findViewById(R.id.loading_progress);
+
+        final LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
+        eventsView.setLayoutManager(linearLayoutManager);
+
+
+        dbHandler = DBHandler.getInstance();
+
+
+        Query query = FirebaseFirestore.getInstance()
+                .collection("events") //Change to correct database
+                .whereEqualTo("recur", false)
+                .orderBy("timestamp")   // Timestamp seems fine
+                ;
+
+        FirestoreRecyclerOptions<CalEvent> options = new FirestoreRecyclerOptions.Builder<CalEvent>()
+                .setQuery(query, CalEvent.class)
+                .build();
+
+        adapter = new FirestoreRecyclerAdapter<CalEvent, CalEventHolder>(options) {
+            @Override
+            protected void onBindViewHolder(@NonNull CalEventHolder viewHolder, int position, @NonNull CalEvent model) {
+                viewHolder.nameColumn.setText(model.getName());
+                viewHolder.toColumn.setText(model.getTo());
+            }
+
+            @NonNull
+            @Override
+            public CalEventHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                View view = LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.view_event, parent, false);
+                return new CalEventHolder(view);
+            }
+
+            @Override
+            public void onDataChanged() {
+                super.onDataChanged();
+                progressBar.setVisibility(View.INVISIBLE);
+                eventsView.setVisibility(View.VISIBLE);
+            }
+
+            @Override
+            public void onError(@NonNull FirebaseFirestoreException e) {
+                super.onError(e);
+                Toast.makeText(getContext(), "There was a problem while loading the events!", Toast.LENGTH_SHORT).show();
+            }
+        };
+
+        eventsView.setAdapter(adapter);
+
+        return r;
     }
 
     // TODO: Rename method, update argument and hook method into UI event
@@ -72,6 +118,19 @@ public class EvalFragment extends Fragment {
         if (mListener != null) {
             mListener.onFragmentInteraction(uri);
         }
+    }
+
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        adapter.startListening();
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        adapter.stopListening();
     }
 
     @Override

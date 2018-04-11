@@ -12,7 +12,6 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -147,7 +146,7 @@ public class DBHandler {
         });
     }
 
-//    public void addEvent(final Event c, final boolean ignoreClash, final OnResponseListener responseListener) {
+//    public void addEvent(final CalEvent c, final boolean ignoreClash, final OnResponseListener responseListener) {
 //        if (ignoreClash) {
 //            addEvent(c, responseListener);
 //            return;
@@ -162,7 +161,7 @@ public class DBHandler {
 //                        QuerySnapshot snapshot = task.getResult();
 //                        if (snapshot != null && !snapshot.isEmpty()) {
 //                            for (QueryDocumentSnapshot doc : snapshot) {
-//                                if (isClash(c, doc.toObject(Event.class))) {
+//                                if (isClash(c, doc.toObject(CalEvent.class))) {
 //                                    response.put(STATUS, STATUS_OK);
 //                                    response.put(DATA, false);
 //                                    responseListener.onResponse(response);
@@ -183,7 +182,7 @@ public class DBHandler {
 //        });
 //    }
 
-    public void addEvent(final Event c, final OnResponseListener responseListener) {
+    public void addEvent(final CalEvent c, final OnResponseListener responseListener) {
         if (c.courseCode != null && !c.courseCode.equals("")) {
             dbCourses.document(c.courseCode).get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                 @Override
@@ -218,7 +217,7 @@ public class DBHandler {
 
     }
 
-    private void addEventToDb(Event c, final OnResponseListener responseListener) {
+    private void addEventToDb(CalEvent c, final OnResponseListener responseListener) {
         dbEvents.add(c).addOnCompleteListener(new OnCompleteListener<DocumentReference>() {
             @Override
             public void onComplete(@NonNull Task<DocumentReference> task) {
@@ -240,7 +239,7 @@ public class DBHandler {
         });
     }
 
-//    private boolean isClash(Event e1, Event e2) throws JSONException {
+//    private boolean isClash(CalEvent e1, CalEvent e2) throws JSONException {
 //        if (!e1.recur) {
 //            if (!e2.recur) {
 //                return e1.date == e2.date && !((e1.from < e2.from && e1.to <= e2.from) || (e1.to > e2.to && e1.from >= e2.to));

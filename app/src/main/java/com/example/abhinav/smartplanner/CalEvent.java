@@ -14,7 +14,7 @@ import java.util.List;
  * Created by abhi on 11/4/18.
  */
 
-public class Event {
+public class CalEvent {
     public static final int EVENT_CLASS = 1;
     public static final int EVENT_OTHER = 2;
 
@@ -27,8 +27,9 @@ public class Event {
     public long from;
     public long to;
 
-    public Event(JSONObject params, int type) {
+    public CalEvent(JSONObject params, int type) {
         this.type = type;
+
         try {
             this.recur = params.getBoolean("recur");
             this.days = new ArrayList<>();
@@ -54,5 +55,12 @@ public class Event {
         } catch (JSONException e) {
             e.printStackTrace();
         }
+
     }
+
+    public String getName() {
+        return name;
+    }
+    public String getTo() { return Long.toString(to); }
+
 }

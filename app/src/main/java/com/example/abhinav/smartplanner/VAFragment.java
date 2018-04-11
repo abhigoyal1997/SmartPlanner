@@ -38,10 +38,8 @@ import com.google.firebase.firestore.Query;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.xml.sax.helpers.LocatorImpl;
 
 import java.lang.*;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -315,7 +313,7 @@ public class VAFragment extends Fragment {
                     });
                 } else if (query.getString(NAME).equals("class")) {
                     JSONObject params = request.getJSONObject(PARAMS);
-                    dbHandler.addEvent(new Event(params, Event.EVENT_CLASS), new OnResponseListener() {
+                    dbHandler.addEvent(new CalEvent(params, CalEvent.EVENT_CLASS), new OnResponseListener() {
                         @Override
                         public void onResponse(JSONObject response) throws JSONException {
                             JSONArray res;
@@ -333,7 +331,7 @@ public class VAFragment extends Fragment {
                     });
                 } else if (query.getString(NAME).equals("event")) {
                     JSONObject params = request.getJSONObject(PARAMS);
-                    dbHandler.addEvent(new Event(params, Event.EVENT_CLASS), new OnResponseListener() {
+                    dbHandler.addEvent(new CalEvent(params, CalEvent.EVENT_CLASS), new OnResponseListener() {
                         @Override
                         public void onResponse(JSONObject response) throws JSONException {
                             JSONArray res;
