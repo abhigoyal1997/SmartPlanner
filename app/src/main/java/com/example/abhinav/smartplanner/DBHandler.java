@@ -36,11 +36,13 @@ public class DBHandler {
     private CollectionReference dbChat;
     private CollectionReference dbCourses;
     private CollectionReference dbEvents;
+    private CollectionReference dbTasks;
 
     public void init(String uid) {
         dbChat = FirebaseFirestore.getInstance().collection("users").document(uid).collection("chat");
         dbCourses = FirebaseFirestore.getInstance().collection("users").document(uid).collection("courses");
         dbEvents = FirebaseFirestore.getInstance().collection("users").document(uid).collection("events");
+        dbTasks = FirebaseFirestore.getInstance().collection("users").document(uid).collection("tasks");
     }
 
     public static DBHandler getInstance() {
@@ -215,7 +217,8 @@ public class DBHandler {
     }
 
     public void getEvents(long from, long to, final OnResponseListener responseListener) {
-        Query query = dbEvents.whereEqualTo("recur", false);;
+        Query query = dbEvents.whereEqualTo("recur", false);
+        ;
         if (to > from) {
             query = dbEvents.whereEqualTo("recur", false)
                     .whereGreaterThan("date", from)
@@ -242,6 +245,30 @@ public class DBHandler {
                     }
                     Log.d("get-events", response.toString());
                     responseListener.onResponse(response);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+
+    public void addToDoTask(final ToDoTask toDoTask, final OnResponseListener responseListener) {
+        dbTasks.add(toDoTask).addOnCompleteListener(new OnCompleteListener<DocumentReference>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentReference> task) {
+                final JSONObject response = new JSONObject();
+                try {
+                    if (task.isSuccessful()) {
+                        response.put(STATUS, STATUS_OK);
+                        response.put(DATA, true);
+                        responseListener.onResponse(response);
+                    } else {
+                        response.put(STATUS, STATUS_ERROR);
+                        response.put(DATA, R.string.error_toast);
+                        responseListener.onResponse(response);
+                    }
+
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -297,26 +324,4 @@ public class DBHandler {
             }
         });
     }
-
-//    private boolean isClash(CalEvent e1, CalEvent e2) throws JSONException {
-//        if (!e1.recur) {
-//            if (!e2.recur) {
-//                return e1.date == e2.date && !((e1.from < e2.from && e1.to <= e2.from) || (e1.to > e2.to && e1.from >= e2.to));
-//            }
-//
-//            ArrayList<Integer> daysList = new ArrayList<>();
-//            JSONArray jArray = e2.days;
-//            if (jArray != null) {
-//                for (int i=0;i<jArray.length();i++){
-//                    daysList.add(jArray.getInt(i));
-//                }
-//            }
-////            if (daysList.contains(e1.days.getInt(0))) {
-////
-////            }
-//        }
-//        return true;
-//    }
-
-
 }
