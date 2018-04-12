@@ -15,6 +15,8 @@ import android.widget.Toast;
 
 import com.firebase.ui.firestore.FirestoreRecyclerAdapter;
 import com.firebase.ui.firestore.FirestoreRecyclerOptions;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
@@ -38,6 +40,8 @@ public class EvalFragment extends Fragment {
     private ProgressBar progressBar;
 
     private DBHandler dbHandler;
+    String uid;
+
 
 
     public EvalFragment() {
@@ -66,14 +70,16 @@ public class EvalFragment extends Fragment {
         eventsView.setLayoutManager(linearLayoutManager);
 
 
-        dbHandler = DBHandler.getInstance();
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        uid = user != null ? user.getUid() : "";
 
+        dbHandler = DBHandler.getInstance();
+        dbHandler.init(uid);
 
         Query query = FirebaseFirestore.getInstance()
-                .collection("events") //Change to correct database
-                .whereEqualTo("recur", false)
-                .orderBy("timestamp")   // Timestamp seems fine
-                ;
+                .collection("users").document(uid)
+                .collection("events").whereEqualTo("recur", false)
+                .orderBy("date"); //To be filled
 
         FirestoreRecyclerOptions<CalEvent> options = new FirestoreRecyclerOptions.Builder<CalEvent>()
                 .setQuery(query, CalEvent.class)
