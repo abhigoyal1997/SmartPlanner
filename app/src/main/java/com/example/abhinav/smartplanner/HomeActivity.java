@@ -30,9 +30,6 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.util.Collections;
 import java.util.List;
 
@@ -56,6 +53,8 @@ public class HomeActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         mRes = getResources();
         setContentView(R.layout.activity_splash);
+
+        App.get().homeActivity = this;
     }
 
     @Override
@@ -107,7 +106,7 @@ public class HomeActivity extends AppCompatActivity
                 break;
             case R.id.nav_eval:
                 fragmentClassEvent = EvalFragment.class;
-                fragmentName = mRes.getString(R.string.nav_eval);
+                fragmentName = mRes.getString(R.string.nav_events);
                 break;
             case R.id.nav_schedule:
                 fragmentClassEvent = ScheduleFragment.class;

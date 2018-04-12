@@ -9,6 +9,15 @@ import org.json.JSONObject;
 
 class ToDoTask {
     String title;
+
+    public ToDoTask(String title, String id, long date, long time) {
+        this.title = title;
+        this.id = id;
+        this.date = date;
+        this.time = time;
+    }
+
+    public String id;
     long date;
     long time;
 

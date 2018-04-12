@@ -356,6 +356,33 @@ public class VAFragment extends Fragment {
                             }
                         }
                     });
+                } else if (query.getString(NAME).equals("task")) {
+                    JSONObject params = request.getJSONObject(PARAMS);
+                    dbHandler.getEvents(params.getLong("from"), params.getLong("to"), new OnResponseListener() {
+                        @Override
+                        public void onResponse(JSONObject response) throws JSONException {
+                            if (response.getInt(STATUS) == STATUS_OK) {
+                                @SuppressWarnings("unchecked")
+                                List<CalEvent> events = (List<CalEvent>) response.get(DATA);
+                                if (events.isEmpty()) {
+                                    JSONArray res = speech.getJSONArray(SPEECH_EMP);
+                                    updateChat(res.getString(r.nextInt(res.length())), "bot");
+                                } else {
+                                    JSONArray res = speech.getJSONArray(SPEECH_POS);
+                                    StringBuilder builder = new StringBuilder();
+                                    for (CalEvent event : events) {
+                                        builder.append(event.name);
+                                        builder.append('\n');
+                                    }
+                                    builder.deleteCharAt(builder.lastIndexOf("\n"));
+                                    updateChat(res.getString(r.nextInt(res.length())) + '\n' + builder.toString(), "bot");
+                                }
+                            } else {
+                                JSONArray res = speech.getJSONArray(SPEECH_NEG);
+                                updateChat(res.getString(r.nextInt(res.length())), "bot");
+                            }
+                        }
+                    });
                 }
             } else if (query.getString(TYPE).equals(QUERY_ADD)) {
                 if (query.getString(NAME).equals("course")) {
@@ -368,7 +395,7 @@ public class VAFragment extends Fragment {
                                 if (response.getBoolean(DATA)) {
                                     res = speech.getJSONArray(SPEECH_POS);
                                 } else {
-                                    res = speech.getJSONArray(SPEECH_DUP);
+                                            res = speech.getJSONArray(SPEECH_DUP);
                                 }
                             } else {
                                 res = speech.getJSONArray(SPEECH_NEG);
@@ -386,7 +413,7 @@ public class VAFragment extends Fragment {
                                 if (response.getBoolean(DATA)) {
                                     res = speech.getJSONArray(SPEECH_POS);
                                 } else {
-                                    res = speech.getJSONArray(SPEECH_DUP);
+                                    res = speech.getJSONArray(SPEECH_EMP);
                                 }
                             } else {
                                 res = speech.getJSONArray(SPEECH_NEG);
@@ -404,7 +431,7 @@ public class VAFragment extends Fragment {
                                 if (response.getBoolean(DATA)) {
                                     res = speech.getJSONArray(SPEECH_POS);
                                 } else {
-                                    res = speech.getJSONArray(SPEECH_DUP);
+                                    res = speech.getJSONArray(SPEECH_EMP);
                                 }
                             } else {
                                 res = speech.getJSONArray(SPEECH_NEG);

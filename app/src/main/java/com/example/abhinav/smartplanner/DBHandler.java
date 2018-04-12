@@ -201,6 +201,7 @@ public class DBHandler {
                             } else {
                                 response.put(STATUS, STATUS_OK);
                                 response.put(DATA, false);
+                                Log.d("event", response.toString());
                                 responseListener.onResponse(response);
                             }
                         } else {
@@ -225,6 +226,11 @@ public class DBHandler {
                     .whereGreaterThan("date", from)
                     .whereLessThan("date", to)
                     .orderBy("date");
+            Log.d("get events", String.valueOf(to) + " " + from);
+        } else if (to==from) {
+            query = dbEvents.whereEqualTo("recur", false)
+                    .whereEqualTo("date", from)
+                    .orderBy("from");
             Log.d("get events", String.valueOf(to) + " " + from);
         }
         query.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
@@ -293,9 +299,11 @@ public class DBHandler {
     }
 
     public void addToDoTask(final ToDoTask toDoTask, final OnResponseListener responseListener) {
-        dbTasks.add(toDoTask).addOnCompleteListener(new OnCompleteListener<DocumentReference>() {
+        DocumentReference doc = dbTasks.document();
+        toDoTask.id = doc.getId();
+        doc.set(toDoTask).addOnCompleteListener(new OnCompleteListener<Void>() {
             @Override
-            public void onComplete(@NonNull Task<DocumentReference> task) {
+            public void onComplete(@NonNull Task<Void> task) {
                 final JSONObject response = new JSONObject();
                 try {
                     if (task.isSuccessful()) {
@@ -343,9 +351,55 @@ public class DBHandler {
     }
 
     private void addEventToDb(CalEvent c, final OnResponseListener responseListener) {
-        dbEvents.add(c).addOnCompleteListener(new OnCompleteListener<DocumentReference>() {
+        DocumentReference doc = dbEvents.document();
+        c.id = doc.getId();
+        doc.set(c).addOnCompleteListener(new OnCompleteListener<Void>() {
             @Override
-            public void onComplete(@NonNull Task<DocumentReference> task) {
+            public void onComplete(@NonNull Task<Void> task) {
+                final JSONObject response = new JSONObject();
+                try {
+                    if (task.isSuccessful()) {
+                        response.put(STATUS, STATUS_OK);
+                        response.put(DATA, true);
+                        responseListener.onResponse(response);
+                    } else {
+                        response.put(STATUS, STATUS_ERROR);
+                        response.put(DATA, R.string.error_toast);
+                        responseListener.onResponse(response);
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    public void deleteTask(String id, final OnResponseListener responseListener) {
+        dbTasks.document(id).delete().addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                final JSONObject response = new JSONObject();
+                try {
+                    if (task.isSuccessful()) {
+                        response.put(STATUS, STATUS_OK);
+                        response.put(DATA, true);
+                        responseListener.onResponse(response);
+                    } else {
+                        response.put(STATUS, STATUS_ERROR);
+                        response.put(DATA, R.string.error_toast);
+                        responseListener.onResponse(response);
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    public void deleteEvent(String id, final OnResponseListener responseListener) {
+        dbEvents.document(id).delete().addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
                 final JSONObject response = new JSONObject();
                 try {
                     if (task.isSuccessful()) {

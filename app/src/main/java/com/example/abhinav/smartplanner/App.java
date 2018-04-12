@@ -8,6 +8,7 @@ import android.app.Application;
 
 public class App extends Application {
     private static App mInstance;
+    public HomeActivity homeActivity;
 
     public static App get() {
         return mInstance;

@@ -7,6 +7,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -42,12 +43,9 @@ public class CalendarFragment extends Fragment {
     DBHandler dbHandler;
     String uid;
 
-    private RecyclerView.Adapter<ToDoTaskViewHolder> taskAdapter;
-//    private RecyclerView.Adapter<CalEventHolder> eventAdapter;
-    private RecyclerView taskView;
-    private RecyclerView eventView;
-    List<ToDoTask> tasks = new ArrayList<>();
-    List<CalEvent> events = new ArrayList<>();
+    private RecyclerView.Adapter<CalItemHolder> calAdapter;
+    private RecyclerView calView;
+    List<Object> calItems = new ArrayList<>();
 
     public CalendarFragment() {
         // Required empty public constructor
@@ -92,80 +90,93 @@ public class CalendarFragment extends Fragment {
             }
         });
 
-        taskView = view.findViewById(R.id.calendar_recycler_view);
+        calView = view.findViewById(R.id.calendar_task_rv);
         final LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
-        taskView.setLayoutManager(linearLayoutManager);
+        calView.setLayoutManager(linearLayoutManager);
 
-        taskAdapter = new RecyclerView.Adapter<ToDoTaskViewHolder>() {
+        calAdapter = new RecyclerView.Adapter<CalItemHolder>() {
             @Override
-            public void onBindViewHolder(@NonNull ToDoTaskViewHolder viewHolder, int position) {
-                ToDoTask model = tasks.get(position);
-                viewHolder.title.setText(model.getTitle());
-                Long millis = model.getTime();
-                String hm = String.format(Locale.US, "%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
-                        TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis)));
-                Date date = new Date(model.getDate());
-                String[] dateParts = date.toString().split(" ");
-                String date_s = dateParts[0] + " " + dateParts[1] + " " + dateParts[2] + " " + dateParts[5];
-                viewHolder.timestamp.setText(date_s + " at " + hm);
+            public void onBindViewHolder(@NonNull CalItemHolder viewHolder, int position) {
+                Object model = calItems.get(position);
+                viewHolder.object = model;
+                if (model instanceof ToDoTask) {
+                    ToDoTask task = (ToDoTask) model;
+                    viewHolder.title.setText(task.getTitle());
+                    Long millis = task.getTime();
+                    String hm = String.format(Locale.US, "%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
+                            TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis)));
+                    viewHolder.timestamp.setText("Due at " + hm);
+                } else {
+                    CalEvent event = (CalEvent) model;
+                    viewHolder.title.setText(event.getName());
+                    Long millis = event.getFrom();
+                    String fm = String.format(Locale.US, "%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
+                            TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis)));
+                    millis = event.getTo();
+                    String tm = String.format(Locale.US, "%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
+                            TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis)));
+                    viewHolder.timestamp.setText("From " + fm + " to " + tm);
+                }
             }
 
             @NonNull
             @Override
-            public ToDoTaskViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            public CalItemHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
                 View view = LayoutInflater.from(parent.getContext())
-                        .inflate(R.layout.task_list_item, parent, false);
-                return new ToDoTaskViewHolder(view);
+                        .inflate(R.layout.list_item, parent, false);
+                return new CalItemHolder(view);
             }
 
             @Override
             public int getItemCount() {
-                return tasks.size();
+                return calItems.size();
             }
         };
 
-        taskAdapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
+        calAdapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
             @Override
             public void onItemRangeInserted(int positionStart, int itemCount) {
                 super.onItemRangeInserted(positionStart, itemCount);
 
-                int msgCount = taskAdapter.getItemCount();
+                int msgCount = calAdapter.getItemCount();
                 int lastVisiblePosition = linearLayoutManager.findLastCompletelyVisibleItemPosition();
 
                 if (lastVisiblePosition == -1 ||
                         (positionStart >= (msgCount - 1) &&
                                 lastVisiblePosition == (positionStart - 1))) {
-                    taskView.scrollToPosition(positionStart);
+                    calView.scrollToPosition(positionStart);
                 }
             }
         });
 
-        taskView.setAdapter(taskAdapter);
+        calView.setAdapter(calAdapter);
         fetchCalList(CalendarDay.today());
 
         return view;
     }
 
-    private void fetchCalList(CalendarDay date) {
+    private void fetchCalList(final CalendarDay date) {
         dbHandler.getTasks(date.getDate().getTime(), date.getDate().getTime(), new OnResponseListener() {
             @Override
             public void onResponse(JSONObject response) throws JSONException {
                 if (response.getInt(STATUS) == STATUS_OK) {
-                    tasks = (List<ToDoTask>) response.get(DATA);
-                    taskAdapter.notifyDataSetChanged();
+                    List<ToDoTask> tasks = (List<ToDoTask>) response.get(DATA);
+                    calItems.clear();
+                    calItems.addAll(tasks);
+                    dbHandler.getEvents(date.getDate().getTime(), date.getDate().getTime(), new OnResponseListener() {
+                        @Override
+                        public void onResponse(JSONObject response) throws JSONException {
+                            if (response.getInt(STATUS) == STATUS_OK) {
+                                List<CalEvent> events = (List<CalEvent>) response.get(DATA);
+                                calItems.addAll(events);
+                                calAdapter.notifyDataSetChanged();
+                            } else{
+                                Toast.makeText(getActivity().getApplicationContext(), "Unable to fetch events", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
                 } else{
-                    Toast.makeText(getActivity().getApplicationContext(), "Unable to fetch today's tasks", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-        dbHandler.getEvents(date.getDate().getTime(), date.getDate().getTime(), new OnResponseListener() {
-            @Override
-            public void onResponse(JSONObject response) throws JSONException {
-                if (response.getInt(STATUS) == STATUS_OK) {
-                    events = (List<CalEvent>) response.get(DATA);
-                    taskAdapter.notifyDataSetChanged();
-                } else{
-                    Toast.makeText(getActivity().getApplicationContext(), "Unable to fetch today's events", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getActivity().getApplicationContext(), "Unable to fetch events and tasks", Toast.LENGTH_SHORT).show();
                 }
             }
         });

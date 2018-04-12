@@ -21,6 +21,10 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
 
+import java.util.Date;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
+
 
 /**
  * A simple {@link Fragment} subclass.
@@ -34,7 +38,7 @@ public class EvalFragment extends Fragment {
 
 
     private OnFragmentInteractionListener mListener;
-    private FirestoreRecyclerAdapter<CalEvent, CalEventHolder> adapter;
+    private FirestoreRecyclerAdapter<CalEvent, CalItemHolder> adapter;
 
     private RecyclerView eventsView;
     private ProgressBar progressBar;
@@ -61,7 +65,7 @@ public class EvalFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        final View r = inflater.inflate(R.layout.fragment_eval, container, false);
+        final View r = inflater.inflate(R.layout.fragment_events, container, false);
 
         eventsView = r.findViewById(R.id.events_recycler_view);
         progressBar = r.findViewById(R.id.loading_progress);
@@ -85,19 +89,29 @@ public class EvalFragment extends Fragment {
                 .setQuery(query, CalEvent.class)
                 .build();
 
-        adapter = new FirestoreRecyclerAdapter<CalEvent, CalEventHolder>(options) {
+        adapter = new FirestoreRecyclerAdapter<CalEvent, CalItemHolder>(options) {
             @Override
-            protected void onBindViewHolder(@NonNull CalEventHolder viewHolder, int position, @NonNull CalEvent model) {
-                viewHolder.nameColumn.setText(model.getName());
-                viewHolder.toColumn.setText(model.getTo());
+            protected void onBindViewHolder(@NonNull CalItemHolder viewHolder, int position, @NonNull CalEvent model) {
+                viewHolder.object = model;
+                viewHolder.title.setText(model.getName());
+                Long millis = model.getFrom();
+                String fm = String.format(Locale.US, "%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
+                        TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis)));
+                millis = model.getTo();
+                String tm = String.format(Locale.US, "%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
+                        TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis)));
+                Date date = new Date(model.date);
+                String[] dateParts = date.toString().split(" ");
+                String date_s = dateParts[0] + " " + dateParts[1] + " " + dateParts[2] + " " + dateParts[5];
+                viewHolder.timestamp.setText("On " + date_s + " From " + fm + " to " + tm);
             }
 
             @NonNull
             @Override
-            public CalEventHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            public CalItemHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
                 View view = LayoutInflater.from(parent.getContext())
-                        .inflate(R.layout.view_event, parent, false);
-                return new CalEventHolder(view);
+                        .inflate(R.layout.list_item, parent, false);
+                return new CalItemHolder(view);
             }
 
             @Override

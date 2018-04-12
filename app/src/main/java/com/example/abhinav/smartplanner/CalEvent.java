@@ -16,7 +16,8 @@ public class CalEvent {
     public static final int EVENT_OTHER = 2;
     public static final String[] DAY = new String[]{"Su", "M", "Tu", "W", "Th", "F", "Sa"};
 
-    public String name;
+    public String name;//your deleting code
+    public String id;
     public int type;
     public String courseCode;
     public boolean recur;
@@ -27,7 +28,8 @@ public class CalEvent {
 
     public CalEvent(){}
 
-    public CalEvent(String name, int type, String courseCode, boolean recur, List<Integer> days, long date, long from, long to) {
+    public CalEvent(String id, String name, int type, String courseCode, boolean recur, List<Integer> days, long date, long from, long to) {
+        this.id = id;
         this.name = name;
         this.type = type;
         this.courseCode = courseCode;
@@ -68,6 +70,9 @@ public class CalEvent {
     public String getName() {
         return name;
     }
-    public String getTo() { return Long.toString(to); }
+    public long getTo() { return to; }
 
+    public long getFrom() {
+        return from;
+    }
 }

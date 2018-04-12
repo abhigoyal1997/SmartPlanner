@@ -8,35 +8,26 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.firebase.ui.firestore.FirestoreRecyclerAdapter;
 import com.firebase.ui.firestore.FirestoreRecyclerOptions;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QuerySnapshot;
-import com.prolificinteractive.materialcalendarview.CalendarDay;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
@@ -52,7 +43,7 @@ public class TasksFragment extends Fragment {
     View rootView;
     DBHandler dbHandler;
 
-    private FirestoreRecyclerAdapter<ToDoTask, ToDoTaskViewHolder> adapter;
+    private FirestoreRecyclerAdapter<ToDoTask, CalItemHolder> adapter;
     private RecyclerView taskView;
     private ProgressBar progressBar;
     FirestoreRecyclerOptions<ToDoTask> options;
@@ -98,9 +89,10 @@ public class TasksFragment extends Fragment {
         options = new FirestoreRecyclerOptions.Builder<ToDoTask>()
                 .setQuery(query, ToDoTask.class).build();
 
-        adapter = new FirestoreRecyclerAdapter<ToDoTask, ToDoTaskViewHolder>(options) {
+        adapter = new FirestoreRecyclerAdapter<ToDoTask, CalItemHolder>(options) {
             @Override
-            protected void onBindViewHolder(@NonNull ToDoTaskViewHolder viewHolder, int position, @NonNull ToDoTask model) {
+            protected void onBindViewHolder(@NonNull CalItemHolder viewHolder, int position, @NonNull ToDoTask model) {
+                viewHolder.object = model;
                 viewHolder.title.setText(model.getTitle());
                 Long millis = model.getTime();
                 String hm = String.format("%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
@@ -113,10 +105,10 @@ public class TasksFragment extends Fragment {
 
             @NonNull
             @Override
-            public ToDoTaskViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            public CalItemHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
                 View view = LayoutInflater.from(parent.getContext())
-                        .inflate(R.layout.task_list_item, parent, false);
-                return new ToDoTaskViewHolder(view);
+                        .inflate(R.layout.list_item, parent, false);
+                return new CalItemHolder(view);
             }
 
             @Override
@@ -129,7 +121,7 @@ public class TasksFragment extends Fragment {
             @Override
             public void onError(@NonNull FirebaseFirestoreException e) {
                 super.onError(e);
-                Toast.makeText(getContext(), "There was a problem while loading the tasks!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "There was a problem while loading the calItems!", Toast.LENGTH_SHORT).show();
             }
         };
 

@@ -22,7 +22,7 @@
         <item
             android:id="@+id/nav_eval"
             android:icon="@drawable/ic_menu_eval"
-            android:title="@string/nav_eval" />
+            android:title="@string/nav_events" />
         <item
             android:id="@+id/nav_schedule"
             android:icon="@drawable/ic_menu_schedule"
