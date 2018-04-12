@@ -30,4 +30,5 @@
     <string name="cal_action_month">Month View</string>
     <string name="cal_action_week">Week View</string>
     <string name="error_toast">Something went wrong!</string>
+    <string name="title_activity_add_event">AddEvent</string>
 </resources>
