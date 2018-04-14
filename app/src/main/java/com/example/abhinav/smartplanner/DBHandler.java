@@ -350,6 +350,37 @@ public class DBHandler {
         });
     }
 
+    public void getSchedule(final int day, final OnResponseListener responseListener) {
+        dbEvents.whereEqualTo("recur", true).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                JSONObject response = new JSONObject();
+                try {
+                    if (task.isSuccessful()) {
+                        List<CalEvent> calEvents = new ArrayList<>();
+                        for (QueryDocumentSnapshot doc : task.getResult()) {
+                            CalEvent e = doc.toObject(CalEvent.class);
+                            if (e.days.contains(day)) {
+                                calEvents.add(e);
+                            }
+                        }
+                        Log.d("schedule", calEvents.toString());
+                        response.put(STATUS, STATUS_OK);
+                        response.put(DATA, calEvents);
+                    } else {
+                        Log.d("get events", task.getException().toString());
+                        response.put(STATUS, STATUS_ERROR);
+                        response.put(DATA, R.string.error_toast);
+                    }
+                    Log.d("get-events", response.toString());
+                    responseListener.onResponse(response);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
     private void addEventToDb(CalEvent c, final OnResponseListener responseListener) {
         DocumentReference doc = dbEvents.document();
         c.id = doc.getId();

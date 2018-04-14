@@ -29,10 +29,6 @@
             </intent-filter>
         </activity>
         <activity android:name=".AddTaskActivity" />
-        <activity
-            android:name=".AddEvent"
-            android:label="@string/title_activity_add_event"
-            android:theme="@style/AppTheme" />
     </application>
 
 </manifest>

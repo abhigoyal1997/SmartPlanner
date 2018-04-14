@@ -31,10 +31,10 @@ import java.util.concurrent.TimeUnit;
  * Activities that contain this fragment must implement the
  * {@link OnFragmentInteractionListener} interface
  * to handle interaction events.
- * Use the {@link EvalFragment#newInstance} factory method to
+ * Use the {@link EventsFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class EvalFragment extends Fragment {
+public class EventsFragment extends Fragment {
 
 
     private OnFragmentInteractionListener mListener;
@@ -48,12 +48,12 @@ public class EvalFragment extends Fragment {
 
 
 
-    public EvalFragment() {
+    public EventsFragment() {
         // Required empty public constructor
     }
 
-    public static EvalFragment newInstance() {
-        EvalFragment fragment = new EvalFragment();
+    public static EventsFragment newInstance() {
+        EventsFragment fragment = new EventsFragment();
         return fragment;
     }
 

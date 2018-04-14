@@ -104,17 +104,9 @@ public class HomeActivity extends AppCompatActivity
                 fragmentClassEvent = TasksFragment.class;
                 fragmentName = mRes.getString(R.string.nav_tasks);
                 break;
-            case R.id.nav_eval:
-                fragmentClassEvent = EvalFragment.class;
+            case R.id.nav_events:
+                fragmentClassEvent = EventsFragment.class;
                 fragmentName = mRes.getString(R.string.nav_events);
-                break;
-            case R.id.nav_schedule:
-                fragmentClassEvent = ScheduleFragment.class;
-                fragmentName = mRes.getString(R.string.nav_schedule);
-                break;
-            case R.id.nav_settings:
-                fragmentClassEvent = SettingsFragment.class;
-                fragmentName = mRes.getString(R.string.nav_settings);
                 break;
             case R.id.nav_db:
                 fragmentClassEvent = VAFragment.class;

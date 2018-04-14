@@ -26,6 +26,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -156,27 +157,43 @@ public class CalendarFragment extends Fragment {
     }
 
     private void fetchCalList(final CalendarDay date) {
+        calItems.clear();
+
         dbHandler.getTasks(date.getDate().getTime(), date.getDate().getTime(), new OnResponseListener() {
             @Override
             public void onResponse(JSONObject response) throws JSONException {
                 if (response.getInt(STATUS) == STATUS_OK) {
                     List<ToDoTask> tasks = (List<ToDoTask>) response.get(DATA);
-                    calItems.clear();
                     calItems.addAll(tasks);
-                    dbHandler.getEvents(date.getDate().getTime(), date.getDate().getTime(), new OnResponseListener() {
-                        @Override
-                        public void onResponse(JSONObject response) throws JSONException {
-                            if (response.getInt(STATUS) == STATUS_OK) {
-                                List<CalEvent> events = (List<CalEvent>) response.get(DATA);
-                                calItems.addAll(events);
-                                calAdapter.notifyDataSetChanged();
-                            } else{
-                                Toast.makeText(getActivity().getApplicationContext(), "Unable to fetch events", Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                    });
+                    calAdapter.notifyDataSetChanged();
                 } else{
                     Toast.makeText(getActivity().getApplicationContext(), "Unable to fetch events and tasks", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        dbHandler.getEvents(date.getDate().getTime(), date.getDate().getTime(), new OnResponseListener() {
+            @Override
+            public void onResponse(JSONObject response) throws JSONException {
+                if (response.getInt(STATUS) == STATUS_OK) {
+                    List<CalEvent> events = (List<CalEvent>) response.get(DATA);
+                    calItems.addAll(events);
+                    calAdapter.notifyDataSetChanged();
+                } else{
+                    Toast.makeText(getActivity().getApplicationContext(), "Unable to fetch events", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        dbHandler.getSchedule(date.getCalendar().get(Calendar.DAY_OF_WEEK)-1, new OnResponseListener() {
+            @Override
+            public void onResponse(JSONObject response) throws JSONException {
+                if (response.getInt(STATUS) == STATUS_OK) {
+                    List<CalEvent> events = (List<CalEvent>) response.get(DATA);
+                    calItems.addAll(events);
+                    calAdapter.notifyDataSetChanged();
+                } else{
+                    Toast.makeText(getActivity().getApplicationContext(), "Unable to fetch events", Toast.LENGTH_SHORT).show();
                 }
             }
         });
